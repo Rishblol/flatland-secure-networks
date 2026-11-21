@@ -1,1 +1,3 @@
 lab/** text=auto eol=lf
+firewall/flatland.nft text eol=lf
+scripts/check-business.sh text eol=lf

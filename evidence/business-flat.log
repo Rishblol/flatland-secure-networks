@@ -1,0 +1,43 @@
+$ docker version --format {{.Server.Version}} {{.Server.Os}}/{{.Server.Arch}} {{.Server.KernelVersion}}
+28.5.1 linux/amd64 6.18.58.1-microsoft-standard-WSL2
+
+$ docker compose version
+Docker Compose version v2.40.0-desktop.1
+
+$ docker compose -p flatland-flat -f lab/compose.services.yaml -f lab/compose.flat.yaml ps
+NAME                          IMAGE                       COMMAND                  SERVICE       CREATED          STATUS                    PORTS
+flatland-flat-app-1           flatland-flat-app           "flatland-setup-rout…"   app           35 seconds ago   Up 35 seconds (healthy)
+flatland-flat-database-1      flatland-flat-database      "flatland-setup-rout…"   database      35 seconds ago   Up 35 seconds (healthy)
+flatland-flat-file-1          flatland-flat-file          "flatland-setup-rout…"   file          35 seconds ago   Up 35 seconds (healthy)
+flatland-flat-jump-1          flatland-flat-jump          "flatland-setup-rout…"   jump          35 seconds ago   Up 35 seconds
+flatland-flat-web-1           flatland-flat-web           "flatland-setup-rout…"   web           35 seconds ago   Up 35 seconds (healthy)
+flatland-flat-workstation-1   flatland-flat-workstation   "flatland-setup-rout…"   workstation   35 seconds ago   Up 35 seconds (healthy)
+
+$ bash scripts/check-business.sh flat
+Business validation | layout=flat | project=flatland-flat | revision=71dce1fbb8c01dde57de1b0024aa89483b648f9f
+B01 PASS 2026-11-21T05:12:02Z workstation -> web:443 (HTTPS)
+  Expected: HTTP 200, body contains 'Flatland demo page'
+  Observed: exit=0 output=$'<!doctype html>\n<html lang="en">\n<head>\n  <meta charset="utf-8">\n  <title>Flatland</title>\n</head>\n<body>\n  <h1>Flatland demo page</h1>\n</body>\n</html>\n\nHTTP 200'
+B02 PASS 2026-11-21T05:12:02Z web -> app:8080 (HTTP)
+  Expected: HTTP 200, body is 'healthy'
+  Observed: exit=0 output=$'healthy\n\nHTTP 200'
+B03 PASS 2026-11-21T05:12:03Z app -> database:5432 (PostgreSQL)
+  Expected: output is 'flatland-db-ok'
+  Observed: exit=0 output=flatland-db-ok
+B04 PASS 2026-11-21T05:12:03Z jump -> workstation:22 (SSH)
+  Expected: output is 'lab'
+  Observed: exit=0 output=lab
+B05 PASS 2026-11-21T05:12:04Z jump -> web:22 (SSH)
+  Expected: output is 'lab'
+  Observed: exit=0 output=lab
+B06 PASS 2026-11-21T05:12:05Z jump -> app:22 (SSH)
+  Expected: output is 'lab'
+  Observed: exit=0 output=lab
+B07 PASS 2026-11-21T05:12:05Z jump -> database:22 (SSH)
+  Expected: output is 'lab'
+  Observed: exit=0 output=lab
+B08 PASS 2026-11-21T05:12:06Z jump -> file:22 (SSH)
+  Expected: output is 'lab'
+  Observed: exit=0 output=lab
+Summary: 8 passed, 0 failed
+Validator exit status: 0

@@ -28,6 +28,19 @@ The five service hosts should report healthy and `jump` should be running. Compo
 - SMB uses `lab` / `flatland-smb-demo`.
 - The web container generates a self-signed certificate for `web` on first start. The example uses `curl -k` for the isolated demo. The certificate is at `/etc/nginx/lab-tls/web.crt` in `web` if a caller needs certificate verification.
 
+## Run business validation
+
+Once the flat services are healthy, run the following from Bash. Start the [segmented layout](#segmented-layout) and wait for its services and router before running the second command.
+
+```sh
+bash scripts/check-business.sh flat
+bash scripts/check-business.sh segmented
+```
+
+The runner uses the named Compose project for each layout and checks B01–B08 from the source containers in the [flow matrix](flow-matrix.md#business-flows). B01 accepts the lab's self-signed HTTPS certificate. The SSH checks use the disposable `lab` account and accept newly generated host keys for each run without persisting them. The database check reads the fixture with `lab_reader`.
+
+Capture each command's output in a separate log file for the acceptance handoff. Each check includes its UTC timestamp, path, expected result, and observed command output. The runner exits `0` when all eight pass, `1` when any flow fails, and `2` for invalid usage or an unavailable lab. It reports the remaining checks after a flow fails.
+
 ## Check the service fixtures
 
 ```console
@@ -112,7 +125,7 @@ segmented exec -T router nft --file /etc/flatland/firewall/flatland.nft
 
 Each `flatland-forward-drop` line records a dropped forwarded packet. Match `SRC`, `DST`, `SPT`, `DPT`, and the timestamp to the test case. The `IN` and `OUT` fields identify the source and destination zone interfaces. Logging is limited to 10 packets per second with an initial burst of 20. The drop counter still counts packets above the logging limit. A reload replaces the Flatland table atomically, resets its counters, and keeps connection-tracking state for existing connections. Recreate the router when testing a policy change that must also terminate established sessions.
 
-If the router does not become healthy, use `segmented logs router` to check policy loading, the IPv4 forwarding setting, and the NFLOG listener. If a workload does not become healthy, check `segmented logs <service>` and `segmented ps`. Save logs before teardown.
+If the router does not become healthy, use `segmented logs router` to check policy loading, the IPv4 forwarding setting, and the NFLOG listener. If nftables reports syntax errors with `\r` in an older Windows checkout, use a fresh checkout to apply the repository's LF setting for `firewall/flatland.nft`. If a workload does not become healthy, check `segmented logs <service>` and `segmented ps`. Save logs before teardown.
 
 ### Reset fixtures and tear down
 
