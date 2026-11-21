@@ -72,15 +72,20 @@ h1 { font-size: 3.3rem; line-height: 1.03; letter-spacing: -.065em; font-weight:
 .replay-head button:disabled { color: var(--muted); cursor: default; }
 #replay-step { margin-block: .6rem; min-height: 1.35rem; }
 .replay-chart { display: grid; gap: .55rem; }
-.replay-chart div { display: grid; grid-template-columns: 6rem minmax(2.5rem, 1fr) max-content; align-items: center; gap: .65rem; font-size: .875rem; }
-.replay-chart span { min-width: 10.5rem; color: var(--muted); text-align: right; }
-.replay-chart progress { appearance: none; width: 100%; height: .37rem; border: 0; border-radius: 1rem; accent-color: var(--green); background: var(--raised); }
-.replay-chart progress::-webkit-progress-bar { background: var(--raised); border-radius: 1rem; }
-.replay-chart progress::-webkit-progress-value { background: var(--green); border-radius: 1rem; }
-.replay-chart progress::-moz-progress-bar { background: var(--green); border-radius: 1rem; }
+.replay-chart-row { display: grid; grid-template-columns: 6rem minmax(2.5rem, 1fr) max-content; align-items: center; gap: .65rem; font-size: .875rem; }
+.replay-count { min-width: 10.5rem; color: var(--muted); text-align: right; }
+.replay-track { display: flex; height: .42rem; border-radius: 1rem; overflow: hidden; background: var(--raised); }
+.replay-track i { flex: 1; background: var(--fill, transparent); transform: scaleX(0); transform-origin: left; }
+.replay-track i[data-outcome="reached"] { --fill: var(--green); }
+.replay-track i[data-outcome="blocked"] { --fill: var(--red); }
+.replay-track i[data-outcome="other"] { --fill: var(--amber); }
+.replay-track i[data-outcome]:not([data-outcome=""]) { transform: scaleX(1); transition: transform .22s ease-out; }
+@media (prefers-reduced-motion: reduce) {
+  .replay-track i[data-outcome] { transition: none; }
+}
 @media (max-width: 30rem) {
-  .replay-chart div { grid-template-columns: 5rem 1fr; gap: .3rem .6rem; }
-  .replay-chart span { grid-column: 2; text-align: left; }
+  .replay-chart-row { grid-template-columns: 5rem 1fr; gap: .3rem .6rem; }
+  .replay-count { grid-column: 2; text-align: left; }
 }
 .hub { margin-inline: auto; width: max-content; min-width: 11rem; border: 1px solid var(--wire); border-radius: .45rem; background: var(--selected); padding: .55rem .95rem; text-align: center; font-weight: 680; }
 .hub small { display: block; color: var(--canvas-muted); font: .75rem var(--mono); margin-top: .2rem; }

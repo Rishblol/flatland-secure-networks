@@ -33,7 +33,7 @@ const security = [
 ];
 const evidence = {};
 let applicationEvidence;
-let layout = "segmented";
+let layout = "flat";
 let filter = "security";
 let selected = security[0][0];
 
@@ -65,15 +65,15 @@ function parseLog(text) {
   return { records, revision: text.match(/revision=([\da-f]+)/)?.[1], drops: text.split(/\r?\n/).filter((line) => line.includes(" flatland-forward-drop ")) };
 }
 
-function statusFor(id) {
-  const application = applicationEvidence?.[layout]?.[id];
+function statusFor(id, mode = layout) {
+  const application = applicationEvidence?.[mode]?.[id];
   if (application) return application.status;
-  const status = evidence[layout]?.records[id]?.status;
+  const status = evidence[mode]?.records[id]?.status;
   if (!status) return "Unavailable";
   if (status === "NOT_RUN") return "Not run";
   if (status === "BASELINE") return "Baseline";
   if (status !== "PASS") return status === "FAIL" ? "Failed" : "Inconclusive";
-  if (id.startsWith("S")) return layout === "segmented" ? "Blocked" : "Reachable";
+  if (id.startsWith("S")) return mode === "segmented" ? "Blocked" : "Reachable";
   return "Passed";
 }
 
@@ -264,12 +264,22 @@ const chart = {};
 const replayButton = byId("replay-play");
 const replayStep = byId("replay-step");
 const replayRows = () => filter === "business" ? business : security.filter((row) => row[2]);
+const layoutLabel = (mode) => mode === "flat" ? "Flat" : "Segmented";
+const replayOutcome = (result) => result === "Blocked" ? "blocked" :
+  ["Passed", "Reachable"].includes(result) ? "reached" : "other";
 
 function stopReplay() {
   replayActive = false;
   cancelAnimationFrame(replayFrame);
   clearTimeout(replayTimer);
-  replayButton.textContent = "Play comparison";
+  replayButton.textContent = `Play ${layoutLabel(layout)}`;
+}
+
+function updateReplayPrompt() {
+  replayButton.textContent = `Play ${layoutLabel(layout)}`;
+  replayButton.disabled = !evidence[layout];
+  replayStep.textContent = replayButton.disabled ? "The selected capture is unavailable. Refresh to retry." :
+    `Press Play ${layoutLabel(layout)} to replay this layout (about ${replayRows().length === 6 ? 7 : 9} seconds).`;
 }
 
 function resetReplay() {
@@ -277,18 +287,27 @@ function resetReplay() {
   const rows = replayRows();
   const category = filter === "business" ? "Business flows" : "Workstation checks";
   byId("replay-scope").textContent = `${category} · recorded outcomes`;
-  replayButton.disabled = !replayModes.every((mode) => evidence[mode]);
-  replayStep.textContent = replayButton.disabled ? "Both evidence captures are needed for playback." : "Watch each check in Flat and Segmented.";
+  updateReplayPrompt();
   for (const mode of replayModes) {
     chart[mode] = { reached: 0, blocked: 0, other: 0 };
-    byId(`replay-${mode}`).max = rows.length;
+    if (evidence[mode]) {
+      for (const [id] of rows) chart[mode][replayOutcome(statusFor(id, mode))]++;
+    }
+    const track = byId(`replay-${mode}`);
+    if (track.children.length !== rows.length) {
+      track.replaceChildren(...rows.map(() => element("i")));
+    }
     updateReplayChart(mode);
   }
 }
 
 function updateReplayChart(mode) {
   const { reached, blocked, other } = chart[mode];
-  byId(`replay-${mode}`).value = reached;
+  const track = byId(`replay-${mode}`);
+  for (const [index, segment] of Array.from(track.children).entries()) {
+    segment.dataset.outcome = index < reached ? "reached" :
+      index < reached + blocked ? "blocked" : index < reached + blocked + other ? "other" : "";
+  }
   byId(`replay-${mode}-text`).textContent =
     `${reached} reached · ${blocked} blocked${other ? ` · ${other} unresolved` : ""}`;
 }
@@ -301,7 +320,7 @@ function routeType(mode, row, outcome) {
   return outcome === "blocked" ? "drop" : "routed";
 }
 
-function animatePath(row, route, duration, onComplete) {
+function animatePath(row, route, duration) {
   const map = byId("map");
   const canvas = element("canvas", "", "traffic-path");
   canvas.setAttribute("aria-hidden", "true");
@@ -321,7 +340,7 @@ function animatePath(row, route, duration, onComplete) {
   };
 
   function frame(now) {
-    const fraction = Math.min(1, (now - started) / duration);
+    const fraction = Math.max(0, Math.min(1, (now - started) / duration));
     if (ctx) {
       const origin = map.getBoundingClientRect();
       const dpr = window.devicePixelRatio || 1;
@@ -338,19 +357,22 @@ function animatePath(row, route, duration, onComplete) {
       const leg = Math.min(points.length - 2, Math.floor(fraction * (points.length - 1)));
       const progress = fraction * (points.length - 1) - leg;
       const marker = points[leg].map((value, axis) => value + (points[leg + 1][axis] - value) * progress);
-      const color = getComputedStyle(map).getPropertyValue(route === "drop" && fraction === 1 ? "--red" : "--green").trim();
+      const color = route === "drop" ? "#ff9a8a" : "#7de6bf";
       ctx.strokeStyle = color;
       ctx.lineWidth = 2;
-      ctx.globalAlpha = .8;
-      stroke([...points.slice(0, leg + 1), marker]);
+      ctx.globalAlpha = .35;
+      ctx.setLineDash([5, 5]);
+      stroke(points);
+      ctx.setLineDash([]);
+      ctx.lineWidth = 3;
       ctx.globalAlpha = 1;
+      stroke([...points.slice(0, leg + 1), marker]);
       ctx.fillStyle = color;
       ctx.beginPath();
       ctx.arc(...marker, 4.5, 0, Math.PI * 2);
       ctx.fill();
     }
     if (fraction < 1 && !reducedMotion.matches) replayFrame = requestAnimationFrame(frame);
-    else if (replayActive) onComplete();
   }
   frame(reducedMotion.matches ? started + duration : started);
 }
@@ -365,25 +387,27 @@ function setLayout(mode) {
   render();
 }
 
-function playComparison() {
+function playLayout() {
   const rows = replayRows();
-  const sequence = replayModes.flatMap((mode) => rows.map((row) => [mode, row]));
-  resetReplay();
+  const mode = layout;
+  chart[mode] = { reached: 0, blocked: 0, other: 0 };
+  updateReplayChart(mode);
   replayActive = true;
   replayButton.textContent = "Stop replay";
   let index = 0;
 
   function next() {
-    if (index === sequence.length) {
+    if (index === rows.length) {
       stopReplay();
-      replayStep.textContent = "Comparison complete. Counts reflect the recorded checks.";
+      replayStep.textContent = mode === "flat" ?
+        "Flat replay complete. Select Segmented, then press Play Segmented." : "Segmented replay complete.";
       return;
     }
-    const [mode, row] = sequence[index++];
+    const row = rows[index++];
     selected = row[0];
-    setLayout(mode);
+    render();
     const result = statusFor(row[0]);
-    const outcome = result === "Blocked" ? "blocked" : ["Passed", "Reachable"].includes(result) ? "reached" : "other";
+    const outcome = replayOutcome(result);
     const route = routeType(mode, row, outcome);
     const label = `${mode === "flat" ? "Flat" : "Segmented"} · ${row[0]} · ${row[1]}`;
     replayStep.textContent = label;
@@ -399,8 +423,13 @@ function playComparison() {
       replayStep.textContent = `${label} · ${outcome === "other" ? result : description[route]}`;
       replayTimer = setTimeout(next, 620);
     };
-    if (outcome === "other") settle();
-    else animatePath(row, route, 520, settle);
+    if (outcome === "other" || reducedMotion.matches) {
+      if (outcome !== "other") animatePath(row, route, 520);
+      settle();
+    } else {
+      animatePath(row, route, 520);
+      replayTimer = setTimeout(settle, 520);
+    }
   }
   next();
 }
@@ -411,13 +440,15 @@ replayButton.addEventListener("click", () => {
     byId("map").querySelector(".traffic-path")?.remove();
     replayStep.textContent = "Replay stopped.";
   } else {
-    playComparison();
+    playLayout();
+    byId("map").scrollIntoView({ block: "nearest" });
   }
 });
 
 document.querySelectorAll("input[name=layout]").forEach((input) => input.addEventListener("change", () => {
-  resetReplay();
+  stopReplay();
   setLayout(input.value);
+  updateReplayPrompt();
 }));
 document.querySelectorAll("[data-filter]").forEach((button) => button.addEventListener("click", () => {
   filter = button.dataset.filter;
@@ -430,12 +461,12 @@ byId("live-indicator").addEventListener("click", () => { byId("runtime").open = 
 refreshLive();
 
 const loadCapture = async (mode) => {
-  const response = await fetch(`/evidence/${mode}.log`);
+  const response = await fetch(`/evidence/${mode}.log`, { signal: AbortSignal.timeout(5000) });
   if (!response.ok) throw new Error();
   evidence[mode] = parseLog(await response.text());
 };
 const loadApplicationChecks = async () => {
-  const response = await fetch("/evidence/application-checks.json");
+  const response = await fetch("/evidence/application-checks.json", { signal: AbortSignal.timeout(5000) });
   if (!response.ok) throw new Error();
   applicationEvidence = await response.json();
 };

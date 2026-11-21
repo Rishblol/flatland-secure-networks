@@ -143,7 +143,7 @@ python demo/serve.py
 
 Open the [local dashboard](http://127.0.0.1:8765/) and switch between **Flat** and **Segmented**. Container readiness updates automatically. Select a traffic result for recorded evidence, or expand **Live runtime** for the current router log. The recorded evidence remains available when Docker is offline.
 
-Choose **Workstation checks** or **Business flows**, then select **Play comparison** to replay both layouts. The path trace and chart reflect recorded check outcomes. Playback runs locally in the browser and does not send traffic to the lab.
+Choose **Workstation checks** or **Business flows**, then select **Play Flat**. When playback stops, select **Segmented** and press **Play Segmented**. The path trace and chart reflect recorded check outcomes. Playback runs locally in the browser and does not send traffic to the lab.
 
 1. **One minute** · Show the diagram and explain which business paths need to stay open.
 2. **One to two minutes** · Show the flat baseline and explain what the workstation could reach.

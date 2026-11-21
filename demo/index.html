@@ -24,8 +24,8 @@
       </div>
       <fieldset class="switch">
         <legend class="sr-only">Network layout</legend>
-        <label><input type="radio" name="layout" value="flat"> <span>Flat</span></label>
-        <label><input type="radio" name="layout" value="segmented" checked> <span>Segmented</span></label>
+        <label><input type="radio" name="layout" value="flat" checked> <span>Flat</span></label>
+        <label><input type="radio" name="layout" value="segmented"> <span>Segmented</span></label>
       </fieldset>
     </section>
 
@@ -41,12 +41,12 @@
     <section class="replay" aria-labelledby="replay-title">
       <div class="replay-head">
         <div><h2 id="replay-title">Traffic replay</h2><p id="replay-scope">Workstation checks · recorded outcomes</p></div>
-        <button type="button" id="replay-play" disabled>Play comparison</button>
+        <button type="button" id="replay-play" disabled>Play Flat</button>
       </div>
-      <p id="replay-step" role="status">Watch each check in Flat and Segmented.</p>
-      <div class="replay-chart" aria-label="Checks reaching the destination during playback">
-        <div><label for="replay-flat">Flat</label><progress id="replay-flat" value="0" max="6"></progress><span id="replay-flat-text">0 reached · 0 blocked</span></div>
-        <div><label for="replay-segmented">Segmented</label><progress id="replay-segmented" value="0" max="6"></progress><span id="replay-segmented-text">0 reached · 0 blocked</span></div>
+      <p id="replay-step" role="status">Loading the Flat and Segmented results…</p>
+      <div class="replay-chart" role="group" aria-label="Recorded checks reached or blocked">
+        <div class="replay-chart-row"><span>Flat</span><div id="replay-flat" class="replay-track" aria-hidden="true"></div><span id="replay-flat-text" class="replay-count">0 reached · 0 blocked</span></div>
+        <div class="replay-chart-row"><span>Segmented</span><div id="replay-segmented" class="replay-track" aria-hidden="true"></div><span id="replay-segmented-text" class="replay-count">0 reached · 0 blocked</span></div>
       </div>
     </section>
 
@@ -60,7 +60,7 @@
         <ul id="results-list" class="results-list" aria-label="Recorded traffic results"></ul>
       </section>
       <section class="evidence" aria-labelledby="evidence-title">
-        <div class="section-head"><div><h2 id="evidence-title">Recorded evidence</h2><p id="capture"></p></div><a id="raw-log" href="/evidence/segmented.log" target="_blank" rel="noopener">Raw log</a></div>
+        <div class="section-head"><div><h2 id="evidence-title">Recorded evidence</h2><p id="capture"></p></div><a id="raw-log" href="/evidence/flat.log" target="_blank" rel="noopener">Raw log</a></div>
         <div id="evidence-detail" class="evidence-detail" aria-live="polite"></div>
       </section>
     </div>
