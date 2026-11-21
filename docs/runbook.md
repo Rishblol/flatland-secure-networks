@@ -41,6 +41,27 @@ The runner uses the named Compose project for each layout and checks B01–B08 f
 
 Capture each command's output in a separate log file for the acceptance handoff. Each check includes its UTC timestamp, path, expected result, and observed command output. The runner exits `0` when all eight pass, `1` when any flow fails, and `2` for invalid usage or an unavailable lab. It reports the remaining checks after a flow fails.
 
+## Run security validation
+
+With the flat lab healthy, capture the baseline and check its exit status.
+
+```sh
+capture_dir=$(mktemp -d)
+flat_status=0
+bash scripts/check-security.sh flat >"$capture_dir/security-flat.log" 2>&1 || flat_status=$?
+printf 'Flat validator exit status %s\n' "$flat_status"
+```
+
+Start the [segmented layout](#segmented-layout), wait for readiness, and capture the comparison.
+
+```sh
+segmented_status=0
+bash scripts/check-security.sh segmented >"$capture_dir/security-segmented.log" 2>&1 || segmented_status=$?
+printf 'Segmented validator exit status %s\n' "$segmented_status"
+```
+
+Review both exit statuses and retain both logs. Each run includes the business controls, fixed workstation TCP checks, and read-only fixture observations. The segmented run records matching router drop logs. See the [security validation design](security-validation.md) for the exit codes and coverage boundaries.
+
 ## Check the service fixtures
 
 ```console
