@@ -2,23 +2,23 @@
 
 Secure Networks Hackathon · Network segmentation and firewall design
 
-**Status:** The flat lab, segmented topology, and router firewall policy are implemented. B01–B08 passed in both layouts. See the [business validation results](evidence/business-results.md).
-
-The [integration report](docs/report.md) consolidates the business results, workstation baseline, matching firewall drops, acceptance gaps, and demo handoff.
+Flatland demonstrates how network segmentation limits what a compromised workstation can reach while preserving legitimate traffic. All eight business flows passed in both layouts. The segmented firewall blocked workstation access to protected services, and router logs corroborated the blocks. [Integration report](docs/report.md)
 
 ## Problem statement
 
-A company runs its workstation and servers on one flat network. A compromised workstation can reach services it has no business accessing. Build the flat network, capture a baseline, then split it into security zones and enforce a default-deny policy. The demo must show that unauthorized paths are blocked while legitimate business traffic still works.
+A company runs its workstation, servers, and admin jump host on one flat network. A compromised workstation can reach internal services such as the database and file server directly. The company needs to restrict that access while keeping the web application and administrative access working.
 
 The brief calls for at least six containers or VMs: a user workstation, web server, application server, database host, file server running Samba or equivalent, and an admin jump host. In the segmented version, connect the user, DMZ, server, and management networks through a router container. Use nftables or iptables and log dropped traffic.
 
 The brief specifies teams of three to four. This README assigns six contributors as requested. Confirm with the organizers whether all six may participate as one team.
 
-## Lab design
+## Proposed solution
 
-Person 1's flat Compose lab is in `lab/`. See the [lab runbook](docs/runbook.md) for startup, service addresses and credentials, and fixture reset.
+Build a flat baseline and a segmented layout with the same six workloads, service names, and synthetic fixtures. Give each workload a zone based on its role. Route traffic between zones through a firewall that allows only the approved connections and logs denied traffic. Compare the same service paths in both layouts and verify that the destination services are healthy when an access attempt is blocked.
 
-The [segmented Compose overlay](lab/compose.segmented.yaml) uses the same workload images, service names, and fixtures. The [topology diagrams](docs/diagram.md) show the four zones. The [addressing and flow matrix](docs/flow-matrix.md) documents the router interfaces and the approved traffic enforced by [flatland.nft](firewall/flatland.nft). Follow the [segmented runbook](docs/runbook.md#segmented-layout) to start the lab, inspect routes, and retrieve drop logs. Run validation only against team-owned lab services.
+## System design
+
+The flat layout places all six workloads on one internal Docker bridge. The segmented layout uses four internal macvlan networks. Each workload attaches to one zone, and the router has one interface in each zone. Neither layout publishes lab service ports to the host. [Topology diagrams](docs/diagram.md) · [Addressing and flow matrix](docs/flow-matrix.md)
 
 | Host | Flat layout | Segmented zone |
 |---|---|---|
@@ -30,11 +30,11 @@ The [segmented Compose overlay](lab/compose.segmented.yaml) uses the same worklo
 | Admin jump host | Shared network | Management |
 | Router | — | One interface in each zone |
 
-The four zone subnets fit within `10.149.240.0/24`. Check for Docker and VPN subnet conflicts before starting the lab. The application, database, and file server share a zone. Their same-zone traffic does not traverse the router.
+Each segmented zone has a separate `/26` within `10.149.240.0/24`. Workloads route traffic for the other zones through their local router interface. The application, database, and file server share the Server zone and communicate directly. Check for Docker and VPN subnet conflicts before starting the lab.
 
 ### Business flow matrix
 
-The service ports below match the lab's [service contract](docs/runbook.md#service-contract). Record a separate test result for each jump-host destination.
+The following paths are part of the lab's [service contract](docs/runbook.md#service-contract).
 
 | ID | Source | Destination | Protocol | Expected check |
 |---|---|---|---|---|
@@ -47,22 +47,26 @@ The service ports below match the lab's [service contract](docs/runbook.md#servi
 | B07 | Admin jump host | Database host | SSH, TCP 22 | Authorized lab session runs a harmless command |
 | B08 | Admin jump host | File server | SSH, TCP 22 | Authorized lab session runs a harmless command |
 
-The firewall allows the approved inter-zone flows and their return traffic, and logs and drops other forwarded traffic. Use the [full flow matrix](docs/flow-matrix.md) as the source of truth for reviews and tests.
+## Implementation
 
-## Acceptance checks
+1. **Workloads and fixtures.** Both Compose layouts use shared definitions for OpenSSH, nginx HTTPS, the HTTP application health endpoint, PostgreSQL, and Samba. The lab includes a synthetic text file and a read-only database fixture. [Shared Compose services](lab/compose.services.yaml) · [Dockerfile](lab/Dockerfile)
+2. **Network policy.** The segmented router loads the `nftables` rules before opening its zone interfaces to workload traffic. It allows seven approved routed business flows and established or related return traffic. B03 stays in the Server zone. The router drops other forwarded traffic and sends rate-limited drop records to NFLOG, where a listener writes them to the router's container log. [Segmented Compose overlay](lab/compose.segmented.yaml) · [Router ruleset](firewall/flatland.nft)
+3. **Validation.** The business script checks B01–B08 in either layout. The workstation validator checks fixed TCP paths, destination health, fixture state, and matching router logs. Separate application checks used the lab accounts to verify SSH login, SMB share listing, and synthetic file transfer. [Business validator](scripts/check-business.sh) · [Workstation validator](scripts/check-security.sh) · [Application evidence](evidence/application-checks.json)
 
-Run the same checks from the same source roles in both layouts. Record the expected result, observed result, timestamp, and evidence for every test. A service that was already down in the flat layout cannot demonstrate that the firewall blocked it.
+<a id="acceptance-checks"></a>
+
+## Results
 
 | Check | Flat baseline | Segmented result |
 |---|---|---|
-| B01–B08 · Business flows | All pass | All still pass |
-| S01 · Workstation visibility of designated internal service ports | Internal ports in scope are reachable | Internal ports in scope are blocked. The permitted HTTPS service remains reachable. |
-| S02 · Workstation-to-database-host SSH | Lab SSH access is demonstrated | Workstation access is blocked while admin SSH to the host still works |
-| S03 · Workstation-to-file-server SMB | Lab SMB access is demonstrated | Workstation access is blocked |
-| S04 · Workstation file copy to a second lab host | A synthetic fixture is successfully copied using the designated lab service | The same copy fails and the fixture is absent at the destination |
-| L01 · Firewall evidence | Baseline results captured | Drop logs corroborate the denied cross-zone checks |
+| B01–B08 · Business flows | 8 of 8 passed | 8 of 8 passed |
+| S01 · Internal service ports | Workstation reached the application, PostgreSQL, and SMB ports | All three connections were blocked. Approved HTTPS still passed. |
+| S02 · Workstation SSH to database | Workstation login succeeded | The workstation connection timed out with a matching firewall drop. Jump-host SSH still passed. |
+| S03 · Workstation SMB share access | Workstation listed the share | The connection timed out with a matching firewall drop. The share remained healthy. |
+| S04 · Synthetic SMB file copy | Copy succeeded and both SHA-256 hashes matched. The uploaded copy was removed. | The upload timed out with a matching firewall drop. The destination remained empty. |
+| L01 · Firewall evidence | Connectivity and client results recorded | All four fixed TCP probes and all three application checks matched router drop records. |
 
-The brief expects two reproducible scripts, one for legitimate traffic and one for the workstation security checks. Use disposable fixtures. Record which destination and service S04 uses, ensure that path is outside the allowlist, and reset the destination fixture between runs. For a blocked result, confirm the destination service is healthy through an authorized path or a local health check.
+The automated regression suite passed. The application checks were run individually. Hostname validation covered the declared service names in both layouts. Discovery of previously unknown hosts and outbound filtering remain untested. [Integration report and ATT&CK mapping](docs/report.md) · [Validation coverage](docs/security-validation.md)
 
 ## Contributor roles
 
@@ -96,11 +100,11 @@ When a service port, name, or zone changes, update the flow matrix and notify th
 | 4:15–4:45 | Person 6 leads a clean run and demo rehearsal. Owners review their evidence and finalize the diagram, matrix, ruleset, scripts, and mapping. | A teammate can reproduce the checks from the runbook and the demo fits in 5–7 minutes. |
 | 4:45–5:00 | Freeze changes and submit the repository link or ZIP. | Submission points to the revision used for the demo. |
 
-## Proposed repository layout
+## Repository layout
 
 | Path | Contents |
 |---|---|
-| `README.md` | Problem statement, team plan, and acceptance criteria |
+| `README.md` | Problem statement, design, implementation, results, and team plan |
 | `lab/` | Flat and segmented Compose definitions, service configs, and synthetic fixtures |
 | `firewall/flatland.nft` | Router firewall policy |
 | `scripts/check-business.sh` | Business-flow checks |
@@ -109,24 +113,35 @@ When a service port, name, or zone changes, update the flow matrix and notify th
 | `docs/flow-matrix.md` | Addresses, ports, and approved flows |
 | `docs/runbook.md` | Prerequisites, startup, validation, reset, and teardown commands |
 | `docs/report.md` | Results, limitations, and ATT&CK mapping |
-| `evidence/` | Baseline and segmented test outputs and relevant firewall logs |
+| `evidence/` | Baseline and segmented test outputs, application checks, and firewall logs |
+| `demo/` | Dashboard for topology, recorded evidence, and live Docker health |
 
 Use the [runbook](docs/runbook.md) for the exact launch and teardown commands. Keep fixture data synthetic and credentials disposable. Record the revision, topology, test case ID, and expected and observed outcomes with the evidence.
 
 ## ATT&CK mapping
 
-Use the IDs listed in the brief and tie each mapping to evidence from the lab.
+The [integration report](docs/report.md#attck-mapping) maps the observed lab behavior to ATT&CK and D3FEND. Coverage varies by technique.
 
 | Technique | Lab evidence |
 |---|---|
 | T1046 · Network Service Discovery | Visibility of designated internal service ports from the workstation |
 | T1021.002 · SMB/Windows Admin Shares or T1021.004 · SSH | Remote-service evidence for the protocol and behavior demonstrated |
 | T1570 · Lateral Tool Transfer | Transfer of the synthetic fixture between lab hosts |
-| T1018 · Remote System Discovery | Evidence of internal host discovery where demonstrated |
+| T1018 · Remote System Discovery | Known lab hostnames resolved in both layouts. Discovery of previously unknown hosts remains untested. |
 
 The brief also lists D3FEND Network Isolation, Inbound Traffic Filtering, and Outbound Traffic Filtering, plus ATT&CK mitigations M1030 (Network Segmentation) and M1037 (Filter Network Traffic).
 
 ## Demo and submission
+
+Start both layouts from the repository root to prepare the live demo.
+
+```console
+docker compose -f lab/compose.services.yaml -f lab/compose.flat.yaml up --build --wait
+docker compose -f lab/compose.services.yaml -f lab/compose.segmented.yaml up --build --wait
+python demo/serve.py
+```
+
+Open the [local dashboard](http://127.0.0.1:8765/) and switch between **Flat** and **Segmented**. Container readiness updates automatically. Select a traffic result for recorded evidence, or expand **Live runtime** for the current router log. The recorded evidence remains available when Docker is offline.
 
 1. **One minute** · Show the diagram and explain which business paths need to stay open.
 2. **One to two minutes** · Show the flat baseline and explain what the workstation could reach.

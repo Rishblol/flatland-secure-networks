@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Explore Flatland’s network topology and the recorded evidence for its firewall policy.">
+  <title>Flatland | Network lab</title>
+  <link rel="stylesheet" href="/style.css">
+  <script src="/app.js" defer></script>
+</head>
+<body>
+  <header class="site-header">
+    <div class="wrap header-inner">
+      <a class="wordmark" href="/" aria-label="Flatland home"><span class="mark" aria-hidden="true"><i></i><i></i><i></i><i></i></span> Flatland</a>
+      <span class="header-label">Network segmentation lab</span>
+      <a class="live-indicator" id="live-indicator" href="#runtime" data-state="pending"><i aria-hidden="true"></i><span id="live-status" role="status">Checking Docker</span></a>
+    </div>
+  </header>
+  <main class="wrap">
+    <section class="intro" aria-labelledby="title">
+      <div>
+        <h1 id="title">Network isolation</h1>
+        <p>See which connections survive segmentation.</p>
+      </div>
+      <fieldset class="switch">
+        <legend class="sr-only">Network layout</legend>
+        <label><input type="radio" name="layout" value="flat"> <span>Flat</span></label>
+        <label><input type="radio" name="layout" value="segmented" checked> <span>Segmented</span></label>
+      </fieldset>
+    </section>
+
+    <section class="topology" aria-labelledby="topology-title">
+      <div class="panel-head">
+        <div><h2 id="topology-title">Network topology</h2><p id="topology-caption"></p></div>
+        <span id="topology-policy" class="policy"></span>
+      </div>
+      <div class="map-viewport" tabindex="0" aria-label="Scrollable topology diagram"><div id="map" class="map"></div></div>
+      <div class="map-footer"><span id="map-summary"></span><span id="map-runtime">Checking container health</span></div>
+    </section>
+
+    <div class="results-grid">
+      <section class="results" aria-labelledby="results-title">
+        <div class="section-head"><div><h2 id="results-title">Traffic results</h2><p id="results-summary" aria-live="polite">Loading integration evidence…</p></div></div>
+        <div class="result-filter" role="group" aria-label="Traffic result filter">
+          <button type="button" data-filter="security" aria-pressed="true">Workstation checks</button>
+          <button type="button" data-filter="business" aria-pressed="false">Business flows</button>
+        </div>
+        <ul id="results-list" class="results-list" aria-label="Recorded traffic results"></ul>
+      </section>
+      <section class="evidence" aria-labelledby="evidence-title">
+        <div class="section-head"><div><h2 id="evidence-title">Recorded evidence</h2><p id="capture"></p></div><a id="raw-log" href="/evidence/segmented.log" target="_blank" rel="noopener">Raw log</a></div>
+        <div id="evidence-detail" class="evidence-detail" aria-live="polite"></div>
+      </section>
+    </div>
+
+    <details id="runtime" class="live-panel">
+      <summary><span>Live runtime</span><span id="live-message">Reading local Docker…</span></summary>
+      <div id="live-services" class="service-list"></div>
+      <div id="live-logs" class="runtime-logs" hidden>
+        <h2>Recent router drops</h2>
+        <p id="live-log-empty">No drop events in the current router log.</p>
+        <pre id="live-log" tabindex="0" aria-label="Live router drop log" hidden></pre>
+      </div>
+    </details>
+  </main>
+</body>
+</html>

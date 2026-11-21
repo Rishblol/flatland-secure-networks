@@ -60,7 +60,7 @@ bash scripts/check-security.sh segmented >"$capture_dir/security-segmented.log" 
 printf 'Segmented validator exit status %s\n' "$segmented_status"
 ```
 
-Review both exit statuses and retain both logs. Each run includes B01–B08, fixed workstation TCP checks, and read-only fixture observations. The segmented run records matching router drop logs. A zero exit status covers transport and fixture controls. S04's copy status is reported separately. See the [security validation design](security-validation.md) for the exit codes and coverage boundaries.
+Review both exit statuses and retain both logs. Each run includes B01–B08, fixed workstation TCP checks, and read-only fixture observations. The segmented run records matching router drop logs. A zero exit status covers transport and fixture controls. The individual SSH, SMB listing, and synthetic copy results are in the [application evidence](../evidence/application-checks.json). See the [security validation design](security-validation.md) for the validator's exit codes and coverage.
 
 For the final integration run, use a clean checkout and fresh lab projects. If either project already exists, save any evidence before resetting it. Record the Git revision, Docker Engine version, and Compose version alongside both logs. Run `docker compose config --quiet` with each pair of Compose files before startup, and run `bash tests/check-security.sh` for the Docker-free regression suite. The security validator already runs the business validator in each layout. After capturing the results, cross-check each reported denial against the flat baseline, destination health, and the corresponding segmented router record. See the [integration report](report.md) for the acceptance matrix and demo sequence.
 

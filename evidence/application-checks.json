@@ -1,0 +1,59 @@
+{
+  "revision": "5284a208e7d3f787409381ca04b894aae2e8f0fc",
+  "method": "Individual application checks from the unprivileged workstation, using the documented lab accounts and a synthetic fixture.",
+  "flat": {
+    "S02": {
+      "status": "Passed",
+      "timestamp": "2026-11-21T06:31:36.5552104Z",
+      "summary": "The workstation authenticated to the database host over SSH. The remote command returned lab.",
+      "output": "exit=0\nlab"
+    },
+    "S03": {
+      "status": "Passed",
+      "timestamp": "2026-11-21T06:31:47.0365233Z",
+      "summary": "The workstation authenticated to the SMB transfer share and listed it successfully.",
+      "output": "exit=0\nDirectory listing returned . and ..\n1055762868 blocks of size 1024. 996853708 blocks available"
+    },
+    "S04": {
+      "status": "Passed",
+      "timestamp": "2026-11-21T06:32:17.3751458Z",
+      "summary": "The workstation copied the synthetic file over SMB. The source and destination SHA-256 hashes matched, and the uploaded copy was removed.",
+      "output": "exit=0\nDestination before: absent\nDestination after: present\nSource SHA-256:      64412c2fed40ddc7713b7ccf18d7e80667107e1491eae0d02d933fecfc749bdb\nDestination SHA-256: 64412c2fed40ddc7713b7ccf18d7e80667107e1491eae0d02d933fecfc749bdb\nDestination after cleanup: absent"
+    },
+    "knownNames": {
+      "timestamp": "2026-11-21T06:32:25.8548748Z",
+      "app": "172.18.0.7",
+      "database": "172.18.0.5",
+      "file": "172.18.0.3"
+    }
+  },
+  "segmented": {
+    "S02": {
+      "status": "Blocked",
+      "timestamp": "2026-11-21T06:31:36.5761463Z",
+      "summary": "The workstation SSH client timed out. The router logged the dropped connection, and the authorized jump-to-database SSH check still passed.",
+      "output": "exit=255\nssh: connect to host database port 22: Connection timed out",
+      "drop": "2026-11-21T06:31:37.138667782Z Nov 21 06:31:37 b9df4ff3ddd5 flatland-forward-drop  IN=zone-user OUT=zone-server MAC=0a:ca:d4:be:7b:78:9a:83:93:2b:1c:bb:08:00 SRC=10.149.240.10 DST=10.149.240.139 LEN=60 TOS=10 PREC=0x00 TTL=63 ID=26292 DF PROTO=TCP SPT=43034 DPT=22 SEQ=1171622640 ACK=0 WINDOW=64240 SYN URGP=0 MARK=0x0"
+    },
+    "S03": {
+      "status": "Blocked",
+      "timestamp": "2026-11-21T06:31:47.0048904Z",
+      "summary": "The workstation SMB directory listing timed out. The router logged the drop, and the file server's local share health check passed.",
+      "output": "exit=1\ndo_connect: Connection to file failed (Error NT_STATUS_IO_TIMEOUT)",
+      "drop": "2026-11-21T06:31:47.710543149Z Nov 21 06:31:47 b9df4ff3ddd5 flatland-forward-drop  IN=zone-user OUT=zone-server MAC=0a:ca:d4:be:7b:78:9a:83:93:2b:1c:bb:08:00 SRC=10.149.240.10 DST=10.149.240.140 LEN=60 TOS=00 PREC=0x00 TTL=63 ID=46436 DF PROTO=TCP SPT=42106 DPT=445 SEQ=2142616055 ACK=0 WINDOW=64240 SYN URGP=0 MARK=0x0"
+    },
+    "S04": {
+      "status": "Blocked",
+      "timestamp": "2026-11-21T06:32:17.3771910Z",
+      "summary": "The workstation's synthetic upload timed out. The router logged the drop and the destination stayed empty.",
+      "output": "exit=1\ndo_connect: Connection to file failed (Error NT_STATUS_IO_TIMEOUT)\nDestination before: absent\nDestination after: absent\nDestination after cleanup: absent",
+      "drop": "2026-11-21T06:32:18.006418882Z Nov 21 06:32:18 b9df4ff3ddd5 flatland-forward-drop  IN=zone-user OUT=zone-server MAC=0a:ca:d4:be:7b:78:9a:83:93:2b:1c:bb:08:00 SRC=10.149.240.10 DST=10.149.240.140 LEN=60 TOS=00 PREC=0x00 TTL=63 ID=60993 DF PROTO=TCP SPT=54168 DPT=445 SEQ=1338626909 ACK=0 WINDOW=64240 SYN URGP=0 MARK=0x0"
+    },
+    "knownNames": {
+      "timestamp": "2026-11-21T06:32:25.8219619Z",
+      "app": "10.149.240.138",
+      "database": "10.149.240.139",
+      "file": "10.149.240.140"
+    }
+  }
+}
