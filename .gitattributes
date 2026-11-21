@@ -1,1 +1,2 @@
 lab/** text=auto eol=lf
+scripts/check-business.sh text eol=lf

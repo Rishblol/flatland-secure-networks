@@ -28,6 +28,19 @@ The five service hosts should report healthy and `jump` should be running. Compo
 - SMB uses `lab` / `flatland-smb-demo`.
 - The web container generates a self-signed certificate for `web` on first start. The example uses `curl -k` for the isolated demo. The certificate is at `/etc/nginx/lab-tls/web.crt` in `web` if a caller needs certificate verification.
 
+## Run business validation
+
+Once the flat services are healthy, run the following from Bash. Start the [segmented layout](#segmented-layout) and wait for its services and router before running the second command.
+
+```sh
+bash scripts/check-business.sh flat
+bash scripts/check-business.sh segmented
+```
+
+The runner uses the named Compose project for each layout and checks B01–B08 from the source containers in the [flow matrix](flow-matrix.md#business-flows). B01 accepts the lab's self-signed HTTPS certificate. The SSH checks use the disposable `lab` account and accept newly generated host keys for each run without persisting them. The database check reads the fixture with `lab_reader`.
+
+Capture each command's output in a separate log file for the acceptance handoff. Each check includes its UTC timestamp, path, expected result, and observed command output. The runner exits `0` when all eight pass, `1` when any flow fails, and `2` for invalid usage or an unavailable lab. It reports the remaining checks after a flow fails.
+
 ## Check the service fixtures
 
 ```console
