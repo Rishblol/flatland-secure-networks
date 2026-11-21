@@ -2,7 +2,7 @@
 
 Secure Networks Hackathon · Network segmentation and firewall design
 
-**Status:** The flat lab, segmented topology, and router firewall policy are implemented. Recorded acceptance results are pending.
+**Status:** The flat lab, segmented topology, and router firewall policy are implemented. B01–B08 passed in both layouts. See the [business validation results](evidence/business-results.md).
 
 ## Problem statement
 

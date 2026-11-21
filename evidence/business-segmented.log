@@ -1,0 +1,74 @@
+$ docker version --format {{.Server.Version}} {{.Server.Os}}/{{.Server.Arch}} {{.Server.KernelVersion}}
+28.5.1 linux/amd64 6.18.58.1-microsoft-standard-WSL2
+
+$ docker compose version
+Docker Compose version v2.40.0-desktop.1
+
+$ docker compose -p flatland-segmented -f lab/compose.services.yaml -f lab/compose.segmented.yaml ps
+NAME                               IMAGE                            COMMAND                  SERVICE       CREATED          STATUS                    PORTS
+flatland-segmented-app-1           flatland-segmented-app           "flatland-setup-rout…"   app           35 seconds ago   Up 31 seconds (healthy)
+flatland-segmented-database-1      flatland-segmented-database      "flatland-setup-rout…"   database      35 seconds ago   Up 31 seconds (healthy)
+flatland-segmented-file-1          flatland-segmented-file          "flatland-setup-rout…"   file          35 seconds ago   Up 31 seconds (healthy)
+flatland-segmented-jump-1          flatland-segmented-jump          "flatland-setup-rout…"   jump          35 seconds ago   Up 31 seconds
+flatland-segmented-router-1        flatland-segmented-router        "flatland-start-rout…"   router        36 seconds ago   Up 34 seconds (healthy)
+flatland-segmented-web-1           flatland-segmented-web           "flatland-setup-rout…"   web           35 seconds ago   Up 31 seconds (healthy)
+flatland-segmented-workstation-1   flatland-segmented-workstation   "flatland-setup-rout…"   workstation   35 seconds ago   Up 31 seconds (healthy)
+
+$ docker compose -p flatland-segmented -f lab/compose.services.yaml -f lab/compose.segmented.yaml exec -T router nft list chain inet flatland business  # Before validation
+table inet flatland {
+	chain business {
+		iifname "zone-user" oifname "zone-dmz" ip saddr 10.149.240.10 ip daddr 10.149.240.74 tcp dport 443 counter packets 0 bytes 0 accept comment "B01 workstation to web"
+		iifname "zone-dmz" oifname "zone-server" ip saddr 10.149.240.74 ip daddr 10.149.240.138 tcp dport 8080 counter packets 0 bytes 0 accept comment "B02 web to app"
+		iifname "zone-mgmt" oifname "zone-user" ip saddr 10.149.240.202 ip daddr 10.149.240.10 tcp dport 22 counter packets 0 bytes 0 accept comment "B04 jump to workstation"
+		iifname "zone-mgmt" oifname "zone-dmz" ip saddr 10.149.240.202 ip daddr 10.149.240.74 tcp dport 22 counter packets 0 bytes 0 accept comment "B05 jump to web"
+		iifname "zone-mgmt" oifname "zone-server" ip saddr 10.149.240.202 ip daddr 10.149.240.138 tcp dport 22 counter packets 0 bytes 0 accept comment "B06 jump to app"
+		iifname "zone-mgmt" oifname "zone-server" ip saddr 10.149.240.202 ip daddr 10.149.240.139 tcp dport 22 counter packets 0 bytes 0 accept comment "B07 jump to database"
+		iifname "zone-mgmt" oifname "zone-server" ip saddr 10.149.240.202 ip daddr 10.149.240.140 tcp dport 22 counter packets 0 bytes 0 accept comment "B08 jump to file"
+	}
+}
+
+$ bash scripts/check-business.sh segmented
+Business validation | layout=segmented | project=flatland-segmented | revision=71dce1fbb8c01dde57de1b0024aa89483b648f9f
+B01 PASS 2026-11-21T05:12:52Z workstation -> web:443 (HTTPS)
+  Expected: HTTP 200, body contains 'Flatland demo page'
+  Observed: exit=0 output=$'<!doctype html>\n<html lang="en">\n<head>\n  <meta charset="utf-8">\n  <title>Flatland</title>\n</head>\n<body>\n  <h1>Flatland demo page</h1>\n</body>\n</html>\n\nHTTP 200'
+B02 PASS 2026-11-21T05:12:53Z web -> app:8080 (HTTP)
+  Expected: HTTP 200, body is 'healthy'
+  Observed: exit=0 output=$'healthy\n\nHTTP 200'
+B03 PASS 2026-11-21T05:12:53Z app -> database:5432 (PostgreSQL)
+  Expected: output is 'flatland-db-ok'
+  Observed: exit=0 output=flatland-db-ok
+B04 PASS 2026-11-21T05:12:54Z jump -> workstation:22 (SSH)
+  Expected: output is 'lab'
+  Observed: exit=0 output=lab
+B05 PASS 2026-11-21T05:12:55Z jump -> web:22 (SSH)
+  Expected: output is 'lab'
+  Observed: exit=0 output=lab
+B06 PASS 2026-11-21T05:12:55Z jump -> app:22 (SSH)
+  Expected: output is 'lab'
+  Observed: exit=0 output=lab
+B07 PASS 2026-11-21T05:12:56Z jump -> database:22 (SSH)
+  Expected: output is 'lab'
+  Observed: exit=0 output=lab
+B08 PASS 2026-11-21T05:12:56Z jump -> file:22 (SSH)
+  Expected: output is 'lab'
+  Observed: exit=0 output=lab
+Summary: 8 passed, 0 failed
+Validator exit status: 0
+
+$ docker compose -p flatland-segmented -f lab/compose.services.yaml -f lab/compose.segmented.yaml exec -T router nft list chain inet flatland business
+table inet flatland {
+	chain business {
+		iifname "zone-user" oifname "zone-dmz" ip saddr 10.149.240.10 ip daddr 10.149.240.74 tcp dport 443 counter packets 1 bytes 60 accept comment "B01 workstation to web"
+		iifname "zone-dmz" oifname "zone-server" ip saddr 10.149.240.74 ip daddr 10.149.240.138 tcp dport 8080 counter packets 1 bytes 60 accept comment "B02 web to app"
+		iifname "zone-mgmt" oifname "zone-user" ip saddr 10.149.240.202 ip daddr 10.149.240.10 tcp dport 22 counter packets 1 bytes 60 accept comment "B04 jump to workstation"
+		iifname "zone-mgmt" oifname "zone-dmz" ip saddr 10.149.240.202 ip daddr 10.149.240.74 tcp dport 22 counter packets 1 bytes 60 accept comment "B05 jump to web"
+		iifname "zone-mgmt" oifname "zone-server" ip saddr 10.149.240.202 ip daddr 10.149.240.138 tcp dport 22 counter packets 1 bytes 60 accept comment "B06 jump to app"
+		iifname "zone-mgmt" oifname "zone-server" ip saddr 10.149.240.202 ip daddr 10.149.240.139 tcp dport 22 counter packets 1 bytes 60 accept comment "B07 jump to database"
+		iifname "zone-mgmt" oifname "zone-server" ip saddr 10.149.240.202 ip daddr 10.149.240.140 tcp dport 22 counter packets 1 bytes 60 accept comment "B08 jump to file"
+	}
+}
+
+$ docker compose -p flatland-segmented -f lab/compose.services.yaml -f lab/compose.segmented.yaml exec -T app ip -4 route get 10.149.240.139
+10.149.240.139 dev eth0 src 10.149.240.138 uid 0
+    cache

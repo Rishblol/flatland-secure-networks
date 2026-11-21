@@ -125,7 +125,7 @@ segmented exec -T router nft --file /etc/flatland/firewall/flatland.nft
 
 Each `flatland-forward-drop` line records a dropped forwarded packet. Match `SRC`, `DST`, `SPT`, `DPT`, and the timestamp to the test case. The `IN` and `OUT` fields identify the source and destination zone interfaces. Logging is limited to 10 packets per second with an initial burst of 20. The drop counter still counts packets above the logging limit. A reload replaces the Flatland table atomically, resets its counters, and keeps connection-tracking state for existing connections. Recreate the router when testing a policy change that must also terminate established sessions.
 
-If the router does not become healthy, use `segmented logs router` to check policy loading, the IPv4 forwarding setting, and the NFLOG listener. If a workload does not become healthy, check `segmented logs <service>` and `segmented ps`. Save logs before teardown.
+If the router does not become healthy, use `segmented logs router` to check policy loading, the IPv4 forwarding setting, and the NFLOG listener. If nftables reports syntax errors with `\r` in an older Windows checkout, use a fresh checkout to apply the repository's LF setting for `firewall/flatland.nft`. If a workload does not become healthy, check `segmented logs <service>` and `segmented ps`. Save logs before teardown.
 
 ### Reset fixtures and tear down
 
