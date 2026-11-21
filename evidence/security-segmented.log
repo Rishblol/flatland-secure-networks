@@ -1,0 +1,81 @@
+$ docker version --format {{.Server.Version}} {{.Server.Os}}/{{.Server.Arch}} {{.Server.KernelVersion}}
+28.5.1 linux/amd64 6.18.58.1-microsoft-standard-WSL2
+
+$ docker compose version
+Docker Compose version v2.40.0-desktop.1
+
+$ bash scripts/check-security.sh segmented
+Security validation | layout=segmented | project=flatland-segmented | revision=d75f7f5d16502831e35f6cf4d4c82b8d7d70c7b6
+Service health (before)
+app|running|healthy
+database|running|healthy
+file|running|healthy
+jump|running|
+router|running|healthy
+web|running|healthy
+workstation|running|healthy
+Business controls
+Business validation | layout=segmented | project=flatland-segmented | revision=d75f7f5d16502831e35f6cf4d4c82b8d7d70c7b6
+B01 PASS 2026-11-21T05:40:19Z workstation -> web:443 (HTTPS)
+  Expected: HTTP 200, body contains 'Flatland demo page'
+  Observed: exit=0 output=$'<!doctype html>\n<html lang="en">\n<head>\n  <meta charset="utf-8">\n  <title>Flatland</title>\n</head>\n<body>\n  <h1>Flatland demo page</h1>\n</body>\n</html>\n\nHTTP 200'
+B02 PASS 2026-11-21T05:40:20Z web -> app:8080 (HTTP)
+  Expected: HTTP 200, body is 'healthy'
+  Observed: exit=0 output=$'healthy\n\nHTTP 200'
+B03 PASS 2026-11-21T05:40:20Z app -> database:5432 (PostgreSQL)
+  Expected: output is 'flatland-db-ok'
+  Observed: exit=0 output=flatland-db-ok
+B04 PASS 2026-11-21T05:40:21Z jump -> workstation:22 (SSH)
+  Expected: output is 'lab'
+  Observed: exit=0 output=lab
+B05 PASS 2026-11-21T05:40:21Z jump -> web:22 (SSH)
+  Expected: output is 'lab'
+  Observed: exit=0 output=lab
+B06 PASS 2026-11-21T05:40:22Z jump -> app:22 (SSH)
+  Expected: output is 'lab'
+  Observed: exit=0 output=lab
+B07 PASS 2026-11-21T05:40:23Z jump -> database:22 (SSH)
+  Expected: output is 'lab'
+  Observed: exit=0 output=lab
+B08 PASS 2026-11-21T05:40:23Z jump -> file:22 (SSH)
+  Expected: output is 'lab'
+  Observed: exit=0 output=lab
+Summary: 8 passed, 0 failed
+S01-app PASS | 2026-11-21T05:40:24.720288200Z | workstation 10.149.240.10:22664 -> app 10.149.240.138:8080 (TCP)
+  Expected: TCP connection times out and router logs the matching SYN drop
+  Observed: exit=1 output=nc:\ connect\ to\ 10.149.240.138\ port\ 8080\ \(tcp\)\ timed\ out:\ Operation\ now\ in\ progress
+  Router evidence:
+2026-11-21T05:40:25.118753970Z Nov 21 05:40:25 9dcb4adfc38e flatland-forward-drop  IN=zone-user OUT=zone-server MAC=a2:c1:f0:ce:26:8e:5e:ec:e1:17:fe:d0:08:00 SRC=10.149.240.10 DST=10.149.240.138 LEN=60 TOS=00 PREC=0x00 TTL=63 ID=49519 DF PROTO=TCP SPT=22664 DPT=8080 SEQ=442812422 ACK=0 WINDOW=64240 SYN URGP=0 MARK=0x0
+2026-11-21T05:40:26.131880898Z Nov 21 05:40:26 9dcb4adfc38e flatland-forward-drop  IN=zone-user OUT=zone-server MAC=a2:c1:f0:ce:26:8e:5e:ec:e1:17:fe:d0:08:00 SRC=10.149.240.10 DST=10.149.240.138 LEN=60 TOS=00 PREC=0x00 TTL=63 ID=49520 DF PROTO=TCP SPT=22664 DPT=8080 SEQ=442812422 ACK=0 WINDOW=64240 SYN URGP=0 MARK=0x0
+S01-database PASS | 2026-11-21T05:40:27.873596860Z | workstation 10.149.240.10:22665 -> database 10.149.240.139:5432 (TCP)
+  Expected: TCP connection times out and router logs the matching SYN drop
+  Observed: exit=1 output=nc:\ connect\ to\ 10.149.240.139\ port\ 5432\ \(tcp\)\ timed\ out:\ Operation\ now\ in\ progress
+  Router evidence:
+2026-11-21T05:40:28.257153819Z Nov 21 05:40:28 9dcb4adfc38e flatland-forward-drop  IN=zone-user OUT=zone-server MAC=a2:c1:f0:ce:26:8e:5e:ec:e1:17:fe:d0:08:00 SRC=10.149.240.10 DST=10.149.240.139 LEN=60 TOS=00 PREC=0x00 TTL=63 ID=13130 DF PROTO=TCP SPT=22665 DPT=5432 SEQ=3387872639 ACK=0 WINDOW=64240 SYN URGP=0 MARK=0x0
+2026-11-21T05:40:29.267787643Z Nov 21 05:40:29 9dcb4adfc38e flatland-forward-drop  IN=zone-user OUT=zone-server MAC=a2:c1:f0:ce:26:8e:5e:ec:e1:17:fe:d0:08:00 SRC=10.149.240.10 DST=10.149.240.139 LEN=60 TOS=00 PREC=0x00 TTL=63 ID=13131 DF PROTO=TCP SPT=22665 DPT=5432 SEQ=3387872639 ACK=0 WINDOW=64240 SYN URGP=0 MARK=0x0
+S01-file PASS | 2026-11-21T05:40:30.984692261Z | workstation 10.149.240.10:22666 -> file 10.149.240.140:445 (TCP)
+  Expected: TCP connection times out and router logs the matching SYN drop
+  Observed: exit=1 output=nc:\ connect\ to\ 10.149.240.140\ port\ 445\ \(tcp\)\ timed\ out:\ Operation\ now\ in\ progress
+  Router evidence:
+2026-11-21T05:40:31.365186618Z Nov 21 05:40:31 9dcb4adfc38e flatland-forward-drop  IN=zone-user OUT=zone-server MAC=a2:c1:f0:ce:26:8e:5e:ec:e1:17:fe:d0:08:00 SRC=10.149.240.10 DST=10.149.240.140 LEN=60 TOS=00 PREC=0x00 TTL=63 ID=65035 DF PROTO=TCP SPT=22666 DPT=445 SEQ=3664367713 ACK=0 WINDOW=64240 SYN URGP=0 MARK=0x0
+2026-11-21T05:40:32.371375668Z Nov 21 05:40:32 9dcb4adfc38e flatland-forward-drop  IN=zone-user OUT=zone-server MAC=a2:c1:f0:ce:26:8e:5e:ec:e1:17:fe:d0:08:00 SRC=10.149.240.10 DST=10.149.240.140 LEN=60 TOS=00 PREC=0x00 TTL=63 ID=65036 DF PROTO=TCP SPT=22666 DPT=445 SEQ=3664367713 ACK=0 WINDOW=64240 SYN URGP=0 MARK=0x0
+S03 PASS | SMB transport | Uses the identical S01-file observation and the file service health checks.
+S02 PASS | 2026-11-21T05:40:34.108868477Z | workstation 10.149.240.10:22667 -> database 10.149.240.139:22 (TCP)
+  Expected: TCP connection times out and router logs the matching SYN drop
+  Observed: exit=1 output=nc:\ connect\ to\ 10.149.240.139\ port\ 22\ \(tcp\)\ timed\ out:\ Operation\ now\ in\ progress
+  Router evidence:
+2026-11-21T05:40:34.514910637Z Nov 21 05:40:34 9dcb4adfc38e flatland-forward-drop  IN=zone-user OUT=zone-server MAC=a2:c1:f0:ce:26:8e:5e:ec:e1:17:fe:d0:08:00 SRC=10.149.240.10 DST=10.149.240.139 LEN=60 TOS=00 PREC=0x00 TTL=63 ID=3091 DF PROTO=TCP SPT=22667 DPT=22 SEQ=3533408443 ACK=0 WINDOW=64240 SYN URGP=0 MARK=0x0
+2026-11-21T05:40:35.537003856Z Nov 21 05:40:35 9dcb4adfc38e flatland-forward-drop  IN=zone-user OUT=zone-server MAC=a2:c1:f0:ce:26:8e:5e:ec:e1:17:fe:d0:08:00 SRC=10.149.240.10 DST=10.149.240.139 LEN=60 TOS=00 PREC=0x00 TTL=63 ID=3092 DF PROTO=TCP SPT=22667 DPT=22 SEQ=3533408443 ACK=0 WINDOW=64240 SYN URGP=0 MARK=0x0
+Service health (after)
+app|running|healthy
+database|running|healthy
+file|running|healthy
+jump|running|
+router|running|healthy
+web|running|healthy
+workstation|running|healthy
+S04-FIXTURE PASS | source=available | destination before=absent after=absent
+S04 NOT_RUN | End-to-end SMB copy | See S03 for the transport result.
+L01 PASS | 4 of 4 fixed TCP probes matched router drop logs.
+Summary: PASS (transport and fixture controls)
+Validator exit status: 0

@@ -1,0 +1,67 @@
+$ docker version --format {{.Server.Version}} {{.Server.Os}}/{{.Server.Arch}} {{.Server.KernelVersion}}
+28.5.1 linux/amd64 6.18.58.1-microsoft-standard-WSL2
+
+$ docker compose version
+Docker Compose version v2.40.0-desktop.1
+
+$ bash scripts/check-security.sh flat
+Security validation | layout=flat | project=flatland-flat | revision=d75f7f5d16502831e35f6cf4d4c82b8d7d70c7b6
+Service health (before)
+app|running|healthy
+database|running|healthy
+file|running|healthy
+jump|running|
+web|running|healthy
+workstation|running|healthy
+Business controls
+Business validation | layout=flat | project=flatland-flat | revision=d75f7f5d16502831e35f6cf4d4c82b8d7d70c7b6
+B01 PASS 2026-11-21T05:40:06Z workstation -> web:443 (HTTPS)
+  Expected: HTTP 200, body contains 'Flatland demo page'
+  Observed: exit=0 output=$'<!doctype html>\n<html lang="en">\n<head>\n  <meta charset="utf-8">\n  <title>Flatland</title>\n</head>\n<body>\n  <h1>Flatland demo page</h1>\n</body>\n</html>\n\nHTTP 200'
+B02 PASS 2026-11-21T05:40:06Z web -> app:8080 (HTTP)
+  Expected: HTTP 200, body is 'healthy'
+  Observed: exit=0 output=$'healthy\n\nHTTP 200'
+B03 PASS 2026-11-21T05:40:07Z app -> database:5432 (PostgreSQL)
+  Expected: output is 'flatland-db-ok'
+  Observed: exit=0 output=flatland-db-ok
+B04 PASS 2026-11-21T05:40:07Z jump -> workstation:22 (SSH)
+  Expected: output is 'lab'
+  Observed: exit=0 output=lab
+B05 PASS 2026-11-21T05:40:08Z jump -> web:22 (SSH)
+  Expected: output is 'lab'
+  Observed: exit=0 output=lab
+B06 PASS 2026-11-21T05:40:09Z jump -> app:22 (SSH)
+  Expected: output is 'lab'
+  Observed: exit=0 output=lab
+B07 PASS 2026-11-21T05:40:09Z jump -> database:22 (SSH)
+  Expected: output is 'lab'
+  Observed: exit=0 output=lab
+B08 PASS 2026-11-21T05:40:10Z jump -> file:22 (SSH)
+  Expected: output is 'lab'
+  Observed: exit=0 output=lab
+Summary: 8 passed, 0 failed
+S01-app PASS | 2026-11-21T05:40:11.384916123Z | workstation 172.21.0.4:24205 -> app 172.21.0.3:8080 (TCP)
+  Expected: TCP connection succeeds
+  Observed: exit=0 output=Connection\ to\ 172.21.0.3\ 8080\ port\ \[tcp/\*\]\ succeeded\!
+S01-database PASS | 2026-11-21T05:40:12.160218816Z | workstation 172.21.0.4:24206 -> database 172.21.0.7:5432 (TCP)
+  Expected: TCP connection succeeds
+  Observed: exit=0 output=Connection\ to\ 172.21.0.7\ 5432\ port\ \[tcp/\*\]\ succeeded\!
+S01-file PASS | 2026-11-21T05:40:12.936714990Z | workstation 172.21.0.4:24207 -> file 172.21.0.6:445 (TCP)
+  Expected: TCP connection succeeds
+  Observed: exit=0 output=Connection\ to\ 172.21.0.6\ 445\ port\ \[tcp/\*\]\ succeeded\!
+S03 PASS | SMB transport | Uses the identical S01-file observation and the file service health checks.
+S02 PASS | 2026-11-21T05:40:13.705160396Z | workstation 172.21.0.4:24208 -> database 172.21.0.7:22 (TCP)
+  Expected: TCP connection succeeds
+  Observed: exit=0 output=Connection\ to\ 172.21.0.7\ 22\ port\ \[tcp/\*\]\ succeeded\!
+Service health (after)
+app|running|healthy
+database|running|healthy
+file|running|healthy
+jump|running|
+web|running|healthy
+workstation|running|healthy
+S04-FIXTURE PASS | source=available | destination before=absent after=absent
+S04 NOT_RUN | End-to-end SMB copy | See S03 for the transport result.
+L01 BASELINE | Router evidence applies to the segmented layout.
+Summary: PASS (transport and fixture controls)
+Validator exit status: 0

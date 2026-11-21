@@ -4,6 +4,8 @@ Secure Networks Hackathon · Network segmentation and firewall design
 
 **Status:** The flat lab, segmented topology, and router firewall policy are implemented. B01–B08 passed in both layouts. See the [business validation results](evidence/business-results.md).
 
+The flat workstation baseline and segmented firewall drop evidence are recorded in the [Person 5 validation results](evidence/security-results.md).
+
 ## Problem statement
 
 A company runs its workstation and servers on one flat network. A compromised workstation can reach services it has no business accessing. Build the flat network, capture a baseline, then split it into security zones and enforce a default-deny policy. The demo must show that unauthorized paths are blocked while legitimate business traffic still works.
