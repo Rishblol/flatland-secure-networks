@@ -1,6 +1,6 @@
-# Flat lab runbook
+# Flatland lab runbook
 
-Run these commands from the repository root with Docker in Linux container mode and the Docker Compose plugin. The first build pulls base images and Debian packages. The running lab uses one internal Docker bridge with no published host ports. Run client commands with `docker compose exec` inside the appropriate source container.
+Run these commands from the repository root with Docker in Linux container mode and the Docker Compose plugin. The first build pulls base images and Debian packages. The flat lab uses one internal Docker bridge with no published host ports. Run client commands with `docker compose exec` inside the appropriate source container.
 
 ## Start and check readiness
 
@@ -53,6 +53,72 @@ The command removes the flat lab containers and their generated fixtures, includ
 docker compose -f lab/compose.services.yaml -f lab/compose.flat.yaml down --volumes
 ```
 
-## Segmented layout handoff
+## Segmented layout
 
-Use `lab/compose.services.yaml` as the first Compose input and the segmented topology as the second. The flat topology file is only for flat runs. Put the segmented layout under a separate project name so teammates can tell the two layouts apart. Attach each workload to its assigned zone and preserve the service names, ports, and fixtures above. For checks that need to work across isolated bridges, use the destination addresses from the segmented addressing plan or provide name resolution for those addresses.
+Use a rootful Docker Engine 28.0 or newer on Linux and Docker Compose 2.36 or newer. The Docker host kernel needs dummy and macvlan links, nftables with connection tracking, and NFLOG. The segmented project is named `flatland-segmented`. Its four macvlan networks are internal and use Docker-created dummy parent links. See the [diagram](diagram.md) and [flow matrix](flow-matrix.md). [Docker macvlan requirements](https://docs.docker.com/engine/network/drivers/macvlan/) · [Compose interface naming](https://docs.docker.com/reference/compose-file/services/#interface_name)
+
+### Check subnets and start
+
+Run these on the Docker host with any usual VPN connected. Compare the connected routes and Docker pools with `10.149.240.0/24`. If there is an overlap, choose a free `/24` and update the addressing in the segmented Compose file, firewall rules, diagram, and matrix together.
+
+```console
+ip -4 route show table all
+docker network ls -q | xargs -r docker network inspect --format '{{.Name}} {{range .IPAM.Config}}{{.Subnet}} {{end}}'
+```
+
+In a shell at the repository root, define this shortcut and start the segmented lab.
+
+```sh
+segmented() {
+    docker compose -f lab/compose.services.yaml -f lab/compose.segmented.yaml "$@"
+}
+
+segmented config --quiet
+segmented up --build --wait
+segmented ps
+```
+
+Compose enables IPv4 forwarding in the router namespace and creates its macvlan interfaces in private mode. The interfaces stay isolated until the startup script loads nftables and switches them to bridge mode. Compose waits for the NFLOG listener before starting workloads. Workload entrypoints install their static route, switch their own interface to bridge mode, and drop `NET_ADMIN` from the service process tree. Use `segmented exec -T --user lab workstation ...` for checks in the workstation user role.
+
+### Verify routing and policy
+
+```sh
+segmented exec -T router ip -br -4 addr
+segmented exec -T router ip -4 route
+segmented exec -T workstation ip -4 route get 10.149.240.74
+segmented exec -T web ip -4 route get 10.149.240.10
+segmented exec -T app ip -4 route get 10.149.240.139
+segmented exec -T router nft list table inet flatland
+```
+
+Check that the router has the four expected `zone-*` interfaces. The workstation and web routes should show their own zone's router as the next hop. The app-to-database route should go directly over `eth0`. Use `segmented config` to confirm each workload has one network attachment and no service publishes host ports.
+
+Use the existing fixture checks with the segmented command prefix. Static name mappings keep the same destinations usable in both layouts.
+
+```sh
+segmented exec -T --user lab workstation curl -fkSs --max-time 5 https://web/
+segmented exec -T web curl -fsS --max-time 5 http://app:8080/health
+segmented exec -T -e PGPASSWORD=flatland-reader-demo app psql -X -h database -U lab_reader -d flatland -Atc "SELECT value FROM lab_fixture WHERE id = 1"
+```
+
+### Read firewall logs and reload the policy
+
+```sh
+segmented logs --timestamps --since 5m router
+segmented exec -T router nft list chain inet flatland deny_forward
+segmented exec -T router nft --check --file /etc/flatland/firewall/flatland.nft
+segmented exec -T router nft --file /etc/flatland/firewall/flatland.nft
+```
+
+Each `flatland-forward-drop` line records a dropped forwarded packet. Match `SRC`, `DST`, `SPT`, `DPT`, and the timestamp to the test case. The `IN` and `OUT` fields identify the source and destination zone interfaces. Logging is limited to 10 packets per second with an initial burst of 20. The drop counter still counts packets above the logging limit. A reload replaces the Flatland table atomically, resets its counters, and keeps connection-tracking state for existing connections. Recreate the router when testing a policy change that must also terminate established sessions.
+
+If the router does not become healthy, use `segmented logs router` to check policy loading, the IPv4 forwarding setting, and the NFLOG listener. If a workload does not become healthy, check `segmented logs <service>` and `segmented ps`. Save logs before teardown.
+
+### Reset fixtures and tear down
+
+```sh
+segmented exec -T file rm -f /srv/transfer/transfer.txt
+segmented down --volumes
+```
+
+The first command clears the S04 destination fixture between runs. The second removes the segmented project and its database volume.

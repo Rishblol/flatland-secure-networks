@@ -2,7 +2,7 @@
 
 Secure Networks Hackathon · Network segmentation and firewall design
 
-**Status:** The flat lab is implemented. Segmentation, firewall policy, and recorded acceptance results are planned.
+**Status:** The flat lab, segmented topology, and router firewall policy are implemented. Recorded acceptance results are pending.
 
 ## Problem statement
 
@@ -16,7 +16,7 @@ The brief specifies teams of three to four. This README assigns six contributors
 
 Person 1's flat Compose lab is in `lab/`. See the [lab runbook](docs/runbook.md) for startup, service addresses and credentials, and fixture reset.
 
-Use Docker Compose for reproducible environments and nftables for the router policy. Use the same service images, service names, and test fixtures in both layouts. Keep the workloads on isolated lab networks and run validation only against team-owned lab services.
+The [segmented Compose overlay](lab/compose.segmented.yaml) uses the same workload images, service names, and fixtures. The [topology diagrams](docs/diagram.md) show the four zones. The [addressing and flow matrix](docs/flow-matrix.md) documents the router interfaces and the approved traffic enforced by [flatland.nft](firewall/flatland.nft). Follow the [segmented runbook](docs/runbook.md#segmented-layout) to start the lab, inspect routes, and retrieve drop logs. Run validation only against team-owned lab services.
 
 | Host | Flat layout | Segmented zone |
 |---|---|---|
@@ -28,11 +28,11 @@ Use Docker Compose for reproducible environments and nftables for the router pol
 | Admin jump host | Shared network | Management |
 | Router | — | One interface in each zone |
 
-Assign one non-overlapping subnet per zone. Before implementation, record subnet ranges, gateway addresses, interface names, and how each host reaches other zones. Check for Docker and VPN subnet conflicts. Verify that traffic between zones goes through the router and that host port publishing or extra network attachments do not bypass it. The application, database, and file server share a zone in this plan. Their same-zone traffic does not traverse the router.
+The four zone subnets fit within `10.149.240.0/24`. Check for Docker and VPN subnet conflicts before starting the lab. The application, database, and file server share a zone. Their same-zone traffic does not traverse the router.
 
-### Proposed business flow matrix
+### Business flow matrix
 
-Confirm the actual service ports with the lab owner before implementing the firewall. Add a separate test result for each jump-host destination.
+The service ports below match the lab's [service contract](docs/runbook.md#service-contract). Record a separate test result for each jump-host destination.
 
 | ID | Source | Destination | Protocol | Expected check |
 |---|---|---|---|---|
@@ -45,7 +45,7 @@ Confirm the actual service ports with the lab owner before implementing the fire
 | B07 | Admin jump host | Database host | SSH, TCP 22 | Authorized lab session runs a harmless command |
 | B08 | Admin jump host | File server | SSH, TCP 22 | Authorized lab session runs a harmless command |
 
-The firewall owner should allow the approved inter-zone flows and their return traffic, then log and drop other forwarded traffic. Keep any required infrastructure flows explicit in the matrix. Treat the matrix as the source of truth for reviews and tests.
+The firewall allows the approved inter-zone flows and their return traffic, and logs and drops other forwarded traffic. Use the [full flow matrix](docs/flow-matrix.md) as the source of truth for reviews and tests.
 
 ## Acceptance checks
 
