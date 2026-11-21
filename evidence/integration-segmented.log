@@ -1,0 +1,96 @@
+Person 6 integration | segmented
+44138d5511411cb4b2f58d657c122f018c2d5932
+2026-11-21T06:05:25Z
+linux/amd64 Docker Engine 29.10.0
+Docker Compose version v5.8.0
+Router interfaces and direct app-to-database route
+lo               UNKNOWN        127.0.0.1/8
+zone-dmz@if23    UP             10.149.240.66/26
+zone-mgmt@if24   UP             10.149.240.194/26
+zone-server@if25 UP             10.149.240.130/26
+zone-user@if26   UP             10.149.240.2/26
+10.149.240.139 dev eth0 src 10.149.240.138 uid 0
+    cache
+Command: bash scripts/check-security.sh segmented
+Security validation | layout=segmented | project=flatland-segmented | revision=44138d5511411cb4b2f58d657c122f018c2d5932
+Service health (before)
+app|running|healthy
+database|running|healthy
+file|running|healthy
+jump|running|
+router|running|healthy
+web|running|healthy
+workstation|running|healthy
+Business controls
+Business validation | layout=segmented | project=flatland-segmented | revision=44138d5511411cb4b2f58d657c122f018c2d5932
+B01 PASS 2026-11-21T06:05:31Z workstation -> web:443 (HTTPS)
+  Expected: HTTP 200, body contains 'Flatland demo page'
+  Observed: exit=0 output=$'<!doctype html>\n<html lang="en">\n<head>\n  <meta charset="utf-8">\n  <title>Flatland</title>\n</head>\n<body>\n  <h1>Flatland demo page</h1>\n</body>\n</html>\n\nHTTP 200'
+B02 PASS 2026-11-21T06:05:31Z web -> app:8080 (HTTP)
+  Expected: HTTP 200, body is 'healthy'
+  Observed: exit=0 output=$'healthy\n\nHTTP 200'
+B03 PASS 2026-11-21T06:05:32Z app -> database:5432 (PostgreSQL)
+  Expected: output is 'flatland-db-ok'
+  Observed: exit=0 output=flatland-db-ok
+B04 PASS 2026-11-21T06:05:32Z jump -> workstation:22 (SSH)
+  Expected: output is 'lab'
+  Observed: exit=0 output=lab
+B05 PASS 2026-11-21T06:05:33Z jump -> web:22 (SSH)
+  Expected: output is 'lab'
+  Observed: exit=0 output=lab
+B06 PASS 2026-11-21T06:05:34Z jump -> app:22 (SSH)
+  Expected: output is 'lab'
+  Observed: exit=0 output=lab
+B07 PASS 2026-11-21T06:05:34Z jump -> database:22 (SSH)
+  Expected: output is 'lab'
+  Observed: exit=0 output=lab
+B08 PASS 2026-11-21T06:05:35Z jump -> file:22 (SSH)
+  Expected: output is 'lab'
+  Observed: exit=0 output=lab
+Summary: 8 passed, 0 failed
+S01-app PASS | 2026-11-21T06:05:36.548079330Z | workstation 10.149.240.10:24793 -> app 10.149.240.138:8080 (TCP)
+  Expected: TCP connection times out and router logs the matching SYN drop
+  Observed: exit=1 output=nc:\ connect\ to\ 10.149.240.138\ port\ 8080\ \(tcp\)\ timed\ out:\ Operation\ now\ in\ progress
+  Router evidence:
+2026-11-21T06:05:36.980925824Z Nov 21 06:05:36 00e00f712409 flatland-forward-drop  IN=zone-user OUT=zone-server MAC=ae:8a:fe:af:b8:00:ae:8b:4f:fe:3b:99:08:00 SRC=10.149.240.10 DST=10.149.240.138 LEN=60 TOS=00 PREC=0x00 TTL=63 ID=55448 DF PROTO=TCP SPT=24793 DPT=8080 SEQ=120909989 ACK=0 WINDOW=64240 SYN URGP=0 MARK=0x0
+2026-11-21T06:05:37.995179253Z Nov 21 06:05:37 00e00f712409 flatland-forward-drop  IN=zone-user OUT=zone-server MAC=ae:8a:fe:af:b8:00:ae:8b:4f:fe:3b:99:08:00 SRC=10.149.240.10 DST=10.149.240.138 LEN=60 TOS=00 PREC=0x00 TTL=63 ID=55449 DF PROTO=TCP SPT=24793 DPT=8080 SEQ=120909989 ACK=0 WINDOW=64240 SYN URGP=0 MARK=0x0
+S01-database PASS | 2026-11-21T06:05:39.836775195Z | workstation 10.149.240.10:24794 -> database 10.149.240.139:5432 (TCP)
+  Expected: TCP connection times out and router logs the matching SYN drop
+  Observed: exit=1 output=nc:\ connect\ to\ 10.149.240.139\ port\ 5432\ \(tcp\)\ timed\ out:\ Operation\ now\ in\ progress
+  Router evidence:
+2026-11-21T06:05:40.245135921Z Nov 21 06:05:40 00e00f712409 flatland-forward-drop  IN=zone-user OUT=zone-server MAC=ae:8a:fe:af:b8:00:ae:8b:4f:fe:3b:99:08:00 SRC=10.149.240.10 DST=10.149.240.139 LEN=60 TOS=00 PREC=0x00 TTL=63 ID=59349 DF PROTO=TCP SPT=24794 DPT=5432 SEQ=3381998924 ACK=0 WINDOW=64240 SYN URGP=0 MARK=0x0
+2026-11-21T06:05:41.259280735Z Nov 21 06:05:41 00e00f712409 flatland-forward-drop  IN=zone-user OUT=zone-server MAC=ae:8a:fe:af:b8:00:ae:8b:4f:fe:3b:99:08:00 SRC=10.149.240.10 DST=10.149.240.139 LEN=60 TOS=00 PREC=0x00 TTL=63 ID=59350 DF PROTO=TCP SPT=24794 DPT=5432 SEQ=3381998924 ACK=0 WINDOW=64240 SYN URGP=0 MARK=0x0
+S01-file PASS | 2026-11-21T06:05:43.068534201Z | workstation 10.149.240.10:24795 -> file 10.149.240.140:445 (TCP)
+  Expected: TCP connection times out and router logs the matching SYN drop
+  Observed: exit=1 output=nc:\ connect\ to\ 10.149.240.140\ port\ 445\ \(tcp\)\ timed\ out:\ Operation\ now\ in\ progress
+  Router evidence:
+2026-11-21T06:05:43.476957138Z Nov 21 06:05:43 00e00f712409 flatland-forward-drop  IN=zone-user OUT=zone-server MAC=ae:8a:fe:af:b8:00:ae:8b:4f:fe:3b:99:08:00 SRC=10.149.240.10 DST=10.149.240.140 LEN=60 TOS=00 PREC=0x00 TTL=63 ID=31755 DF PROTO=TCP SPT=24795 DPT=445 SEQ=269288277 ACK=0 WINDOW=64240 SYN URGP=0 MARK=0x0
+2026-11-21T06:05:44.491339344Z Nov 21 06:05:44 00e00f712409 flatland-forward-drop  IN=zone-user OUT=zone-server MAC=ae:8a:fe:af:b8:00:ae:8b:4f:fe:3b:99:08:00 SRC=10.149.240.10 DST=10.149.240.140 LEN=60 TOS=00 PREC=0x00 TTL=63 ID=31756 DF PROTO=TCP SPT=24795 DPT=445 SEQ=269288277 ACK=0 WINDOW=64240 SYN URGP=0 MARK=0x0
+S03 PASS | SMB transport | Uses the identical S01-file observation and the file service health checks.
+S02 PASS | 2026-11-21T06:05:46.280366954Z | workstation 10.149.240.10:24796 -> database 10.149.240.139:22 (TCP)
+  Expected: TCP connection times out and router logs the matching SYN drop
+  Observed: exit=1 output=nc:\ connect\ to\ 10.149.240.139\ port\ 22\ \(tcp\)\ timed\ out:\ Operation\ now\ in\ progress
+  Router evidence:
+2026-11-21T06:05:46.672367637Z Nov 21 06:05:46 00e00f712409 flatland-forward-drop  IN=zone-user OUT=zone-server MAC=ae:8a:fe:af:b8:00:ae:8b:4f:fe:3b:99:08:00 SRC=10.149.240.10 DST=10.149.240.139 LEN=60 TOS=00 PREC=0x00 TTL=63 ID=33012 DF PROTO=TCP SPT=24796 DPT=22 SEQ=1017791151 ACK=0 WINDOW=64240 SYN URGP=0 MARK=0x0
+2026-11-21T06:05:47.690777040Z Nov 21 06:05:47 00e00f712409 flatland-forward-drop  IN=zone-user OUT=zone-server MAC=ae:8a:fe:af:b8:00:ae:8b:4f:fe:3b:99:08:00 SRC=10.149.240.10 DST=10.149.240.139 LEN=60 TOS=00 PREC=0x00 TTL=63 ID=33013 DF PROTO=TCP SPT=24796 DPT=22 SEQ=1017791151 ACK=0 WINDOW=64240 SYN URGP=0 MARK=0x0
+Service health (after)
+app|running|healthy
+database|running|healthy
+file|running|healthy
+jump|running|
+router|running|healthy
+web|running|healthy
+workstation|running|healthy
+S04-FIXTURE PASS | source=available | destination before=absent after=absent
+S04 NOT_RUN | End-to-end SMB copy | See S03 for the transport result.
+L01 PASS | 4 of 4 fixed TCP probes matched router drop logs.
+Summary: PASS (transport and fixture controls)
+Validator exit status: 0
+Routed business rule counters after validation
+		iifname "zone-user" oifname "zone-dmz" ip saddr 10.149.240.10 ip daddr 10.149.240.74 tcp dport 443 counter packets 1 bytes 60 accept comment "B01 workstation to web"
+		iifname "zone-dmz" oifname "zone-server" ip saddr 10.149.240.74 ip daddr 10.149.240.138 tcp dport 8080 counter packets 1 bytes 60 accept comment "B02 web to app"
+		iifname "zone-mgmt" oifname "zone-user" ip saddr 10.149.240.202 ip daddr 10.149.240.10 tcp dport 22 counter packets 1 bytes 60 accept comment "B04 jump to workstation"
+		iifname "zone-mgmt" oifname "zone-dmz" ip saddr 10.149.240.202 ip daddr 10.149.240.74 tcp dport 22 counter packets 1 bytes 60 accept comment "B05 jump to web"
+		iifname "zone-mgmt" oifname "zone-server" ip saddr 10.149.240.202 ip daddr 10.149.240.138 tcp dport 22 counter packets 1 bytes 60 accept comment "B06 jump to app"
+		iifname "zone-mgmt" oifname "zone-server" ip saddr 10.149.240.202 ip daddr 10.149.240.139 tcp dport 22 counter packets 1 bytes 60 accept comment "B07 jump to database"
+		iifname "zone-mgmt" oifname "zone-server" ip saddr 10.149.240.202 ip daddr 10.149.240.140 tcp dport 22 counter packets 1 bytes 60 accept comment "B08 jump to file"

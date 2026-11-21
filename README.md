@@ -4,7 +4,7 @@ Secure Networks Hackathon · Network segmentation and firewall design
 
 **Status:** The flat lab, segmented topology, and router firewall policy are implemented. B01–B08 passed in both layouts. See the [business validation results](evidence/business-results.md).
 
-The flat workstation baseline and segmented firewall drop evidence are recorded in the [Person 5 validation results](evidence/security-results.md).
+The [integration report](docs/report.md) consolidates the business results, workstation baseline, matching firewall drops, acceptance gaps, and demo handoff.
 
 ## Problem statement
 
@@ -111,7 +111,7 @@ When a service port, name, or zone changes, update the flow matrix and notify th
 | `docs/report.md` | Results, limitations, and ATT&CK mapping |
 | `evidence/` | Baseline and segmented test outputs and relevant firewall logs |
 
-The lab owner should add the exact launch and teardown commands to the runbook once the topology is implemented. Keep fixture data synthetic and credentials disposable. Record the revision, topology, test case ID, and expected and observed outcomes with the evidence.
+Use the [runbook](docs/runbook.md) for the exact launch and teardown commands. Keep fixture data synthetic and credentials disposable. Record the revision, topology, test case ID, and expected and observed outcomes with the evidence.
 
 ## ATT&CK mapping
 
