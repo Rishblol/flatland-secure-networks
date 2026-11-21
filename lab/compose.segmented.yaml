@@ -1,0 +1,150 @@
+name: flatland-segmented
+
+x-route-environment: &route-environment
+  FLATLAND_LAB_SUBNET: 10.149.240.0/24
+
+x-workload: &workload
+  cap_add: [NET_ADMIN]
+  cap_drop: [NET_RAW]
+  depends_on:
+    router:
+      condition: service_healthy
+  extra_hosts:
+    workstation: 10.149.240.10
+    web: 10.149.240.74
+    app: 10.149.240.138
+    database: 10.149.240.139
+    file: 10.149.240.140
+    jump: 10.149.240.202
+
+# A separate dummy parent per zone keeps traffic local. Endpoints start isolated.
+x-zone: &zone
+  driver: macvlan
+  driver_opts:
+    macvlan_mode: private
+  internal: true
+  enable_ipv6: false
+
+services:
+  workstation:
+    <<: *workload
+    environment:
+      <<: *route-environment
+      FLATLAND_ROUTER: 10.149.240.2
+    networks:
+      user:
+        ipv4_address: 10.149.240.10
+
+  web:
+    <<: *workload
+    environment:
+      <<: *route-environment
+      FLATLAND_ROUTER: 10.149.240.66
+    networks:
+      dmz:
+        ipv4_address: 10.149.240.74
+
+  app:
+    <<: *workload
+    environment: &server-environment
+      <<: *route-environment
+      FLATLAND_ROUTER: 10.149.240.130
+    networks:
+      server:
+        ipv4_address: 10.149.240.138
+
+  database:
+    <<: *workload
+    environment: *server-environment
+    networks:
+      server:
+        ipv4_address: 10.149.240.139
+
+  file:
+    <<: *workload
+    environment: *server-environment
+    networks:
+      server:
+        ipv4_address: 10.149.240.140
+
+  jump:
+    <<: *workload
+    environment:
+      <<: *route-environment
+      FLATLAND_ROUTER: 10.149.240.194
+    networks:
+      management:
+        ipv4_address: 10.149.240.202
+
+  router:
+    build:
+      context: .
+      target: router
+    init: true
+    read_only: true
+    cap_drop: [ALL]
+    cap_add: [NET_ADMIN]
+    security_opt:
+      - no-new-privileges:true
+    sysctls:
+      net.ipv4.ip_forward: "1"
+    volumes:
+      - type: bind
+        source: ../firewall
+        target: /etc/flatland/firewall
+        read_only: true
+        bind:
+          create_host_path: false
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - >-
+          [ "$$(cat /proc/sys/net/ipv4/ip_forward)" = 1 ] &&
+          nft list chain inet flatland forward >/dev/null &&
+          awk '$$1 == 10 && $$4 == 2 { ready = 1 } END { exit !ready }'
+          /proc/net/netfilter/nfnetlink_log
+      interval: 2s
+      timeout: 2s
+      retries: 10
+    networks:
+      user:
+        interface_name: zone-user
+        ipv4_address: 10.149.240.2
+      dmz:
+        interface_name: zone-dmz
+        ipv4_address: 10.149.240.66
+      server:
+        interface_name: zone-server
+        ipv4_address: 10.149.240.130
+      management:
+        interface_name: zone-mgmt
+        ipv4_address: 10.149.240.194
+
+networks:
+  user:
+    <<: *zone
+    ipam:
+      config:
+        - subnet: 10.149.240.0/26
+          gateway: 10.149.240.1
+
+  dmz:
+    <<: *zone
+    ipam:
+      config:
+        - subnet: 10.149.240.64/26
+          gateway: 10.149.240.65
+
+  server:
+    <<: *zone
+    ipam:
+      config:
+        - subnet: 10.149.240.128/26
+          gateway: 10.149.240.129
+
+  management:
+    <<: *zone
+    ipam:
+      config:
+        - subnet: 10.149.240.192/26
+          gateway: 10.149.240.193

@@ -1,0 +1,42 @@
+#!/usr/sbin/nft -f
+
+# Replace only the Flatland table in a single transaction, on first load or reload.
+add table inet flatland
+delete table inet flatland
+
+table inet flatland {
+    chain input {
+        type filter hook input priority filter; policy drop;
+        iifname "lo" accept
+    }
+
+    chain forward {
+        type filter hook forward priority filter; policy drop;
+
+        meta nfproto != ipv4 jump deny_forward
+        iifname "zone-user" ip saddr != 10.149.240.0/26 jump deny_forward
+        iifname "zone-dmz" ip saddr != 10.149.240.64/26 jump deny_forward
+        iifname "zone-server" ip saddr != 10.149.240.128/26 jump deny_forward
+        iifname "zone-mgmt" ip saddr != 10.149.240.192/26 jump deny_forward
+        ct state invalid jump deny_forward
+        ct state established,related counter accept comment "Return traffic"
+        ct state new tcp flags & (fin | syn | rst | ack) == syn jump business
+        jump deny_forward
+    }
+
+    chain business {
+        iifname "zone-user" oifname "zone-dmz" ip saddr 10.149.240.10 ip daddr 10.149.240.74 tcp dport 443 counter accept comment "B01 workstation to web"
+        iifname "zone-dmz" oifname "zone-server" ip saddr 10.149.240.74 ip daddr 10.149.240.138 tcp dport 8080 counter accept comment "B02 web to app"
+        # B03 stays on the server network.
+        iifname "zone-mgmt" oifname "zone-user" ip saddr 10.149.240.202 ip daddr 10.149.240.10 tcp dport 22 counter accept comment "B04 jump to workstation"
+        iifname "zone-mgmt" oifname "zone-dmz" ip saddr 10.149.240.202 ip daddr 10.149.240.74 tcp dport 22 counter accept comment "B05 jump to web"
+        iifname "zone-mgmt" oifname "zone-server" ip saddr 10.149.240.202 ip daddr 10.149.240.138 tcp dport 22 counter accept comment "B06 jump to app"
+        iifname "zone-mgmt" oifname "zone-server" ip saddr 10.149.240.202 ip daddr 10.149.240.139 tcp dport 22 counter accept comment "B07 jump to database"
+        iifname "zone-mgmt" oifname "zone-server" ip saddr 10.149.240.202 ip daddr 10.149.240.140 tcp dport 22 counter accept comment "B08 jump to file"
+    }
+
+    chain deny_forward {
+        limit rate 10/second burst 20 packets log prefix "flatland-forward-drop " group 10 snaplen 96 queue-threshold 1
+        counter drop
+    }
+}
