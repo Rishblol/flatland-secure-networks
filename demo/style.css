@@ -63,7 +63,25 @@ h1 { font-size: 3.3rem; line-height: 1.03; letter-spacing: -.065em; font-weight:
 .panel-head p { font-size: .9rem; margin-top: .15rem; }
 .policy { font: .75rem var(--mono); color: var(--green); border: 1px solid var(--line); border-radius: .35rem; padding: .38rem .65rem; white-space: nowrap; }
 .map-viewport { overflow-x: auto; background-image: radial-gradient(oklch(30% .026 230) 1px, transparent 1px); background-size: 1.05rem 1.05rem; }
-.map { min-width: 44rem; padding: 1.2rem 1.35rem 1.35rem; }
+.map { position: relative; min-width: 44rem; padding: 1.2rem 1.35rem 1.35rem; }
+.traffic-path { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 1; }
+.replay { margin-top: 1rem; padding: 1rem 1.1rem; background: var(--surface); border: 1px solid var(--line); border-radius: .7rem; }
+.replay-head { display: flex; align-items: center; justify-content: space-between; gap: .75rem; }
+.replay-head p, #replay-step { color: var(--muted); font-size: .875rem; }
+.replay-head button { min-height: 2.75rem; padding: .45rem .8rem; border: 1px solid var(--wire); border-radius: .4rem; color: var(--green); background: var(--green-tint); font-weight: 650; }
+.replay-head button:disabled { color: var(--muted); cursor: default; }
+#replay-step { margin-block: .6rem; min-height: 1.35rem; }
+.replay-chart { display: grid; gap: .55rem; }
+.replay-chart div { display: grid; grid-template-columns: 6rem minmax(2.5rem, 1fr) max-content; align-items: center; gap: .65rem; font-size: .875rem; }
+.replay-chart span { min-width: 10.5rem; color: var(--muted); text-align: right; }
+.replay-chart progress { appearance: none; width: 100%; height: .37rem; border: 0; border-radius: 1rem; accent-color: var(--green); background: var(--raised); }
+.replay-chart progress::-webkit-progress-bar { background: var(--raised); border-radius: 1rem; }
+.replay-chart progress::-webkit-progress-value { background: var(--green); border-radius: 1rem; }
+.replay-chart progress::-moz-progress-bar { background: var(--green); border-radius: 1rem; }
+@media (max-width: 30rem) {
+  .replay-chart div { grid-template-columns: 5rem 1fr; gap: .3rem .6rem; }
+  .replay-chart span { grid-column: 2; text-align: left; }
+}
 .hub { margin-inline: auto; width: max-content; min-width: 11rem; border: 1px solid var(--wire); border-radius: .45rem; background: var(--selected); padding: .55rem .95rem; text-align: center; font-weight: 680; }
 .hub small { display: block; color: var(--canvas-muted); font: .75rem var(--mono); margin-top: .2rem; }
 .network-groups { --zones: 4; position: relative; display: grid; grid-template-columns: repeat(var(--zones), minmax(0, 1fr)); gap: .75rem; padding-top: 1.8rem; }

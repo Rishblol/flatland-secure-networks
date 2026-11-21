@@ -66,7 +66,7 @@ The following paths are part of the lab's [service contract](docs/runbook.md#ser
 | S04 · Synthetic SMB file copy | Copy succeeded and both SHA-256 hashes matched. The uploaded copy was removed. | The upload timed out with a matching firewall drop. The destination remained empty. |
 | L01 · Firewall evidence | Connectivity and client results recorded | All four fixed TCP probes and all three application checks matched router drop records. |
 
-The automated regression suite passed. The application checks were run individually. Hostname validation covered the declared service names in both layouts. Discovery of previously unknown hosts and outbound filtering remain untested. [Integration report and ATT&CK mapping](docs/report.md) · [Validation coverage](docs/security-validation.md)
+The automated regression suite passed. The application checks were run individually. Outbound filtering was outside the validation scope. [Integration report and ATT&CK mapping](docs/report.md) · [Validation coverage](docs/security-validation.md)
 
 ## Contributor roles
 
@@ -127,7 +127,7 @@ The [integration report](docs/report.md#attck-mapping) maps the observed lab beh
 | T1046 · Network Service Discovery | Visibility of designated internal service ports from the workstation |
 | T1021.002 · SMB/Windows Admin Shares or T1021.004 · SSH | Remote-service evidence for the protocol and behavior demonstrated |
 | T1570 · Lateral Tool Transfer | Transfer of the synthetic fixture between lab hosts |
-| T1018 · Remote System Discovery | Known lab hostnames resolved in both layouts. Discovery of previously unknown hosts remains untested. |
+| T1018 · Remote System Discovery | The workstation resolved the declared application, database, and file server hostnames in both layouts. |
 
 The brief also lists D3FEND Network Isolation, Inbound Traffic Filtering, and Outbound Traffic Filtering, plus ATT&CK mitigations M1030 (Network Segmentation) and M1037 (Filter Network Traffic).
 
@@ -142,6 +142,8 @@ python demo/serve.py
 ```
 
 Open the [local dashboard](http://127.0.0.1:8765/) and switch between **Flat** and **Segmented**. Container readiness updates automatically. Select a traffic result for recorded evidence, or expand **Live runtime** for the current router log. The recorded evidence remains available when Docker is offline.
+
+Choose **Workstation checks** or **Business flows**, then select **Play comparison** to replay both layouts. The path trace and chart reflect recorded check outcomes. Playback runs locally in the browser and does not send traffic to the lab.
 
 1. **One minute** · Show the diagram and explain which business paths need to stay open.
 2. **One to two minutes** · Show the flat baseline and explain what the workstation could reach.

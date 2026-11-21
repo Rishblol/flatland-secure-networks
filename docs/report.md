@@ -38,7 +38,7 @@ The automated workstation validator covers fixed TCP probes, service health, and
 | [T1021.004 · SSH](https://attack.mitre.org/techniques/T1021/004/) | S02 records a successful workstation session on Flat and a dropped connection on Segmented. B07 shows the approved Management path still works. |
 | [T1021.002 · SMB/Windows Admin Shares](https://attack.mitre.org/techniques/T1021/002/) | S03 records access to a purpose-built lab SMB share on Flat and a dropped connection on Segmented. |
 | [T1570 · Lateral Tool Transfer](https://attack.mitre.org/techniques/T1570/) | S04 illustrates host-to-host transfer using a synthetic text fixture. Checksum and destination-state evidence show whether the file arrived. |
-| [T1018 · Remote System Discovery](https://attack.mitre.org/techniques/T1018/) | The workstation resolved the three declared internal hostnames in both layouts. This verifies visibility of known names. Discovery of previously unknown hosts remains outside the tested coverage. |
+| [T1018 · Remote System Discovery](https://attack.mitre.org/techniques/T1018/) | The workstation resolved the declared application, database, and file server hostnames in both layouts. The application evidence records the returned addresses. |
 
 [M1030 · Network Segmentation](https://attack.mitre.org/mitigations/M1030/) corresponds to the four zones. [M1037 · Filter Network Traffic](https://attack.mitre.org/mitigations/M1037/) corresponds to the cross-zone allowlist, default drop, and drop logging.
 

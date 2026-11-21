@@ -184,7 +184,11 @@ function render(restoreFocus = false) {
     button.type = "button";
     button.setAttribute("aria-pressed", String(id === selected));
     button.append(element("span", id, "id"), element("span", title), element("span", status, `status ${status.toLowerCase().replace(" ", "-")}`));
-    button.addEventListener("click", () => { selected = id; render(true); });
+    button.addEventListener("click", () => {
+      resetReplay();
+      selected = id;
+      render(true);
+    });
     item.append(button);
     list.append(item);
     if (restoreFocus && id === selected) button.focus({ preventScroll: true });
@@ -251,15 +255,174 @@ async function refreshLive() {
   liveTimer = setTimeout(refreshLive, 5000);
 }
 
-document.querySelectorAll("input[name=layout]").forEach((input) => input.addEventListener("change", () => {
-  layout = input.value;
-  runtime = undefined;
+let replayFrame;
+let replayTimer;
+let replayActive = false;
+const reducedMotion = matchMedia("(prefers-reduced-motion: reduce)");
+const replayModes = ["flat", "segmented"];
+const chart = {};
+const replayButton = byId("replay-play");
+const replayStep = byId("replay-step");
+const replayRows = () => filter === "business" ? business : security.filter((row) => row[2]);
+
+function stopReplay() {
+  replayActive = false;
+  cancelAnimationFrame(replayFrame);
+  clearTimeout(replayTimer);
+  replayButton.textContent = "Play comparison";
+}
+
+function resetReplay() {
+  stopReplay();
+  const rows = replayRows();
+  const category = filter === "business" ? "Business flows" : "Workstation checks";
+  byId("replay-scope").textContent = `${category} · recorded outcomes`;
+  replayButton.disabled = !replayModes.every((mode) => evidence[mode]);
+  replayStep.textContent = replayButton.disabled ? "Both evidence captures are needed for playback." : "Watch each check in Flat and Segmented.";
+  for (const mode of replayModes) {
+    chart[mode] = { reached: 0, blocked: 0, other: 0 };
+    byId(`replay-${mode}`).max = rows.length;
+    updateReplayChart(mode);
+  }
+}
+
+function updateReplayChart(mode) {
+  const { reached, blocked, other } = chart[mode];
+  byId(`replay-${mode}`).value = reached;
+  byId(`replay-${mode}-text`).textContent =
+    `${reached} reached · ${blocked} blocked${other ? ` · ${other} unresolved` : ""}`;
+}
+
+function routeType(mode, row, outcome) {
+  if (mode === "flat") return "bridge";
+  const sourceZone = zones.findIndex(([, , members]) => members.includes(row[2]));
+  const destZone = zones.findIndex(([, , members]) => members.includes(row[3]));
+  if (sourceZone === destZone) return "direct";
+  return outcome === "blocked" ? "drop" : "routed";
+}
+
+function animatePath(row, route, duration, onComplete) {
+  const map = byId("map");
+  const canvas = element("canvas", "", "traffic-path");
+  canvas.setAttribute("aria-hidden", "true");
+  map.append(canvas);
+  const ctx = canvas.getContext("2d");
+  const started = performance.now();
+  const point = (node, origin, top = false) => {
+    const bounds = node.getBoundingClientRect();
+    return [bounds.left + bounds.width / 2 - origin.left, (top ? bounds.top : bounds.bottom) - origin.top];
+  };
+  const at = (service) => map.querySelector(`[data-service="${service}"]`);
+  const stroke = (points) => {
+    ctx.beginPath();
+    ctx.moveTo(...points[0]);
+    for (const p of points.slice(1)) ctx.lineTo(...p);
+    ctx.stroke();
+  };
+
+  function frame(now) {
+    const fraction = Math.min(1, (now - started) / duration);
+    if (ctx) {
+      const origin = map.getBoundingClientRect();
+      const dpr = window.devicePixelRatio || 1;
+      const width = Math.round(origin.width * dpr);
+      const height = Math.round(origin.height * dpr);
+      if (canvas.width !== width) canvas.width = width;
+      if (canvas.height !== height) canvas.height = height;
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      ctx.clearRect(0, 0, origin.width, origin.height);
+      const source = point(at(row[2]), origin, true);
+      const destination = point(at(row[3]), origin, true);
+      const hub = point(map.querySelector(".hub"), origin);
+      const points = route === "drop" ? [source, hub] : route === "direct" ? [source, destination] : [source, hub, destination];
+      const leg = Math.min(points.length - 2, Math.floor(fraction * (points.length - 1)));
+      const progress = fraction * (points.length - 1) - leg;
+      const marker = points[leg].map((value, axis) => value + (points[leg + 1][axis] - value) * progress);
+      const color = getComputedStyle(map).getPropertyValue(route === "drop" && fraction === 1 ? "--red" : "--green").trim();
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 2;
+      ctx.globalAlpha = .8;
+      stroke([...points.slice(0, leg + 1), marker]);
+      ctx.globalAlpha = 1;
+      ctx.fillStyle = color;
+      ctx.beginPath();
+      ctx.arc(...marker, 4.5, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    if (fraction < 1 && !reducedMotion.matches) replayFrame = requestAnimationFrame(frame);
+    else if (replayActive) onComplete();
+  }
+  frame(reducedMotion.matches ? started + duration : started);
+}
+
+function setLayout(mode) {
+  if (layout !== mode) {
+    layout = mode;
+    runtime = undefined;
+    document.querySelector(`input[name=layout][value="${mode}"]`).checked = true;
+    refreshLive();
+  }
   render();
-  refreshLive();
+}
+
+function playComparison() {
+  const rows = replayRows();
+  const sequence = replayModes.flatMap((mode) => rows.map((row) => [mode, row]));
+  resetReplay();
+  replayActive = true;
+  replayButton.textContent = "Stop replay";
+  let index = 0;
+
+  function next() {
+    if (index === sequence.length) {
+      stopReplay();
+      replayStep.textContent = "Comparison complete. Counts reflect the recorded checks.";
+      return;
+    }
+    const [mode, row] = sequence[index++];
+    selected = row[0];
+    setLayout(mode);
+    const result = statusFor(row[0]);
+    const outcome = result === "Blocked" ? "blocked" : ["Passed", "Reachable"].includes(result) ? "reached" : "other";
+    const route = routeType(mode, row, outcome);
+    const label = `${mode === "flat" ? "Flat" : "Segmented"} · ${row[0]} · ${row[1]}`;
+    replayStep.textContent = label;
+    const settle = () => {
+      chart[mode][outcome]++;
+      updateReplayChart(mode);
+      const description = {
+        drop: "Dropped at the router",
+        direct: "Direct within the Server zone",
+        bridge: "Reached over the shared bridge",
+        routed: "Allowed through the router",
+      };
+      replayStep.textContent = `${label} · ${outcome === "other" ? result : description[route]}`;
+      replayTimer = setTimeout(next, 620);
+    };
+    if (outcome === "other") settle();
+    else animatePath(row, route, 520, settle);
+  }
+  next();
+}
+
+replayButton.addEventListener("click", () => {
+  if (replayActive) {
+    stopReplay();
+    byId("map").querySelector(".traffic-path")?.remove();
+    replayStep.textContent = "Replay stopped.";
+  } else {
+    playComparison();
+  }
+});
+
+document.querySelectorAll("input[name=layout]").forEach((input) => input.addEventListener("change", () => {
+  resetReplay();
+  setLayout(input.value);
 }));
 document.querySelectorAll("[data-filter]").forEach((button) => button.addEventListener("click", () => {
   filter = button.dataset.filter;
   selected = (filter === "business" ? business : security)[0][0];
+  resetReplay();
   document.querySelectorAll("[data-filter]").forEach((tab) => tab.setAttribute("aria-pressed", String(tab === button)));
   render();
 }));
@@ -276,4 +439,7 @@ const loadApplicationChecks = async () => {
   if (!response.ok) throw new Error();
   applicationEvidence = await response.json();
 };
-Promise.allSettled([loadCapture("flat"), loadCapture("segmented"), loadApplicationChecks()]).then(() => render());
+Promise.allSettled([loadCapture("flat"), loadCapture("segmented"), loadApplicationChecks()]).then(() => {
+  render();
+  resetReplay();
+});
