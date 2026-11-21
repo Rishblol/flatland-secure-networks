@@ -2,7 +2,7 @@
 
 Secure Networks Hackathon · Network segmentation and firewall design
 
-**Status:** Planning. The topology, file paths, and checks below are proposed. The team will fill in actual results after running the lab.
+**Status:** The flat lab is implemented. Segmentation, firewall policy, and recorded acceptance results are planned.
 
 ## Problem statement
 
@@ -13,6 +13,8 @@ The brief calls for at least six containers or VMs: a user workstation, web serv
 The brief specifies teams of three to four. This README assigns six contributors as requested. Confirm with the organizers whether all six may participate as one team.
 
 ## Lab design
+
+Person 1's flat Compose lab is in `lab/`. See the [lab runbook](docs/runbook.md) for startup, service addresses and credentials, and fixture reset.
 
 Use Docker Compose for reproducible environments and nftables for the router policy. Use the same service images, service names, and test fixtures in both layouts. Keep the workloads on isolated lab networks and run validation only against team-owned lab services.
 
@@ -71,9 +73,16 @@ Replace the contributor labels with names or GitHub handles at kickoff. Each own
 | Person 3 · Firewall | Default-deny ruleset, return-traffic handling, rule loading, and drop logging | A loaded policy and the log location to Persons 4 and 5 | Person 2 |
 | Person 4 · Business validation | Business-flow script and results for B01–B08 in both layouts | A per-flow pass/fail table to Person 6 | Person 1 |
 | Person 5 · Security validation | Workstation security-check script and evidence for S01–S04 and L01 | Before-and-after results and matching firewall log excerpts to Person 6 | Person 3 |
-| Person 6 · Integration and demo | Integration run, submission checklist, ATT&CK mapping, report, and demo | Verified repository or ZIP and a rehearsed demo for judging | Person 4 |
+| Person 6 · Integration and demo | Clean integration run from the merged revision, acceptance evidence, report and ATT&CK mapping, demo rehearsal, and final submission | Repository link or ZIP tied to the tested commit, with a complete results table and a 5–7 minute demo for judging | Person 4 |
 
-When a service port, name, or zone changes, update the flow matrix and notify the firewall and validation owners in the PR. Person 6 coordinates the final run from the merged revision and records the commit used for the evidence.
+When a service port, name, or zone changes, update the flow matrix and notify the firewall and validation owners in the PR.
+
+### Person 6 · Integration checklist
+
+1. Start from a clean lab at the merged commit. Record the commit SHA, run commands, and timestamps. Run the business and security validation suites in both layouts and capture the segmented firewall logs.
+2. Consolidate B01–B08, S01–S04, and L01 into one results table with expected and observed outcomes and links to evidence. Verify that each claimed firewall block has a passing flat baseline, a service health check, and a matching drop log. Record unresolved failures and rerun affected checks after fixes.
+3. Complete the report and link each ATT&CK mapping to the matching test evidence. Check that the tested revision includes the diagram, flow matrix, ruleset, scripts, runbook, and results.
+4. Rehearse the 5–7 minute demo with the tested revision. Walk through one legitimate flow that still works and one denied flow with its corresponding log. Submit the repository link or ZIP for that revision.
 
 ## Five-hour plan
 
@@ -123,5 +132,3 @@ The brief also lists D3FEND Network Isolation, Inbound Traffic Filtering, and Ou
 4. **One minute** · Point judges to the ruleset, evidence, and ATT&CK mapping.
 
 Submit the network diagram, flow matrix, firewall ruleset, both scripts, baseline and segmented results, and ATT&CK mapping with the repository or ZIP. If the core checks are complete early, the brief lists database host microsegmentation, egress filtering, and management-port rate limiting as optional stretch work.
-
-*Source: Secure Networks Hackathon brief, PS2 “Flatland” and event format.*

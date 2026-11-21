@@ -1,0 +1,61 @@
+x-lab-service: &lab-service
+  init: true
+
+x-build: &lab-build
+  context: .
+
+services:
+  workstation:
+    <<: *lab-service
+    build:
+      <<: *lab-build
+      target: workstation
+    healthcheck:
+      test: ["CMD", "ssh-keyscan", "-T", "2", "127.0.0.1"]
+
+  web:
+    <<: *lab-service
+    build:
+      <<: *lab-build
+      target: web
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fkSs https://127.0.0.1/ | grep -Fq 'Flatland demo page'"]
+
+  app:
+    <<: *lab-service
+    build:
+      <<: *lab-build
+      target: app
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:8080/health | grep -Fx healthy"]
+
+  database:
+    <<: *lab-service
+    build:
+      <<: *lab-build
+      target: database
+    environment:
+      POSTGRES_DB: flatland
+      POSTGRES_PASSWORD: flatland-postgres-demo
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - >-
+          PGPASSWORD=flatland-reader-demo
+          psql -X -h 127.0.0.1 -U lab_reader -d flatland -At
+          -c 'SELECT value FROM lab_fixture WHERE id = 1' | grep -Fx flatland-db-ok
+
+  file:
+    <<: *lab-service
+    build:
+      <<: *lab-build
+      target: file
+    healthcheck:
+      test: ["CMD", "smbclient", "//127.0.0.1/transfer", "-U", "lab%flatland-smb-demo", "-c", "ls"]
+
+  jump:
+    <<: *lab-service
+    build:
+      <<: *lab-build
+      target: jump
+

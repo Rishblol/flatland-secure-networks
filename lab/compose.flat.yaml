@@ -1,0 +1,20 @@
+name: flatland-flat
+
+services:
+  workstation:
+    networks: [flat]
+  web:
+    networks: [flat]
+  app:
+    networks: [flat]
+  database:
+    networks: [flat]
+  file:
+    networks: [flat]
+  jump:
+    networks: [flat]
+
+networks:
+  flat:
+    driver: bridge
+    internal: true
